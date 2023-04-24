@@ -4,6 +4,7 @@ interface IUser extends Document {
   displayName: string;
   username: string;
   email: string;
+  isVerified: boolean;
   password: string;
   bio?: string;
   location?: string;
