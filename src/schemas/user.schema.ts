@@ -3,9 +3,10 @@ import mongoose, { Schema, Document } from "mongoose";
 interface IUser extends Document {
   displayName: string;
   username: string;
-  bio: string;
   email: string;
   password: string;
+  bio?: string;
+  location?: string;
   avatar?: string;
   cover?: string;
   following: mongoose.Types.ObjectId[];
@@ -23,18 +24,27 @@ const UserSchema: Schema = new Schema(
       type: String,
       required: true,
       unique: true,
-    },
-    bio: {
-        type: String,
+      trim: true,
+      maxLength: 30,
     },
     email: {
       type: String,
       required: true,
       unique: true,
+      trim: true,
     },
     password: {
       type: String,
       required: true,
+    },
+    bio: {
+        type: String,
+        maxLength: 160,
+    },
+    location: {
+        type: String,
+        trim: true,
+        maxLength: 30,
     },
     avatar: {
       type: String,
