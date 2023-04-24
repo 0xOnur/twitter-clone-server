@@ -33,6 +33,11 @@ const UserSchema: Schema = new Schema(
       unique: true,
       trim: true,
     },
+    isVerified: {
+      type: Boolean,
+      default: false,
+      required: true,
+    },
     password: {
       type: String,
       required: true,
