@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document } from "mongoose";
+import bcrypt from "bcrypt";
 
 interface IUser extends Document {
   displayName: string;
@@ -9,7 +10,9 @@ interface IUser extends Document {
   bio?: string;
   location?: string;
   avatar?: string;
+  avatarId?: string;
   cover?: string;
+  coverId?: string;
   following: mongoose.Types.ObjectId[];
   createdAt: Date;
   updatedAt: Date;
@@ -55,7 +58,13 @@ const UserSchema: Schema = new Schema(
     avatar: {
       type: String,
     },
+    avatarId: {
+      type: String,
+    },
     cover: {
+      type: String,
+    },
+    coverId: {
       type: String,
     },
     following: [
@@ -69,5 +78,13 @@ const UserSchema: Schema = new Schema(
     timestamps: true,
   }
 );
+
+UserSchema.pre("save", async function (next) {
+  if (!this.isModified("password")) {
+      return next();
+  }
+  this.password = await bcrypt.hash(this.password, 10);
+  next();
+});
 
 export default mongoose.model<IUser>("User", UserSchema);

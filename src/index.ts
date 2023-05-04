@@ -22,7 +22,7 @@ app.use(express.json());
 app.use(helmet());
 app.use(helmet.crossOriginResourcePolicy({policy: 'cross-origin'}));
 app.use(morgan("common"));
-app.use(cors({credentials: true, origin: "http://192.168.10.107:3000"}));
+app.use(cors({credentials: true, origin: "http://localhost:3000"}));
 
 app.use('/user',userRoutes);
 app.use('/tweet', tweetRoutes);
