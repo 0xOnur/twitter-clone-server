@@ -1,9 +1,8 @@
 import { Request, Response } from "express";
 import User from "../schemas/user.schema";
 import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken";
 import cloudinary from "cloudinary";
-import {generateToken, updateToken} from "./tokenController"
+import {generateToken, updateToken, deleteToken} from "./tokenController"
 
 
 // Avatar Options for cloudinary
@@ -14,7 +13,19 @@ const avatarOptions = {
     quality: "auto:eco",
 }
 
-export const createUser = async (req:Request, res:Response) => {
+
+export const LogoutUser = async (req: Request, res: Response) => {
+    try {
+        const userId = req.body.userId;
+        deleteToken(userId);
+        res.status(200).json({message: "Logged out"});
+    } catch (error: any) {
+        res.status(500).json({message: error.message});        
+    }
+}
+
+// Create a user
+export const createUser = async (req: Request, res: Response) => {
     try {
         console.log(req.file);
         console.log(req.body);
@@ -22,7 +33,7 @@ export const createUser = async (req:Request, res:Response) => {
         const emailRegex = /^\S+@\S+\.\S+$/;
         const isValid = emailRegex.test(req.body.email);
         if (!isValid) {
-            res.status(400).json({message: "Email is not valid"});
+            res.status(400).json({ message: "Email is not valid" });
             return;
         }
 
@@ -31,13 +42,13 @@ export const createUser = async (req:Request, res:Response) => {
             displayName: req.body.displayName,
             email: req.body.email,
             password: req.body.password,
-            bio: req.body.bio,
+            bio: req.body?.bio,
             isVerified: false,
         })
 
         await user.validate()
 
-        if(req.file) {
+        if (req.file) {
             const result = await cloudinary.v2.uploader.upload(req.file.path, avatarOptions)
             user.avatar = result.secure_url;
             user.avatarId = result.public_id;
@@ -45,16 +56,16 @@ export const createUser = async (req:Request, res:Response) => {
 
         await user.save()
         const tokens = generateToken(user._id);
-        res.status(201).json({user, tokens});
-        
+        res.status(201).json({ user, tokens });
+
     } catch (error: any) {
         if (error.name === "ValidationError") {
-          res.status(400).json({ message: "Validation Error", errors: error.errors });
+            res.status(400).json({ message: "Validation Error", errors: error.errors });
         } else {
-          res.status(500).json({ message: error.message });
+            res.status(500).json({ message: error.message });
         }
-      }
-    };
+    }
+};
 
 // Check username is taken
 export const usernameIsAvailable = async (req:Request, res:Response) => {

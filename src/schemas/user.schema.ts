@@ -57,6 +57,7 @@ const UserSchema: Schema = new Schema(
     },
     avatar: {
       type: String,
+      default: "https://res.cloudinary.com/dwcw9iftp/image/upload/v1682952193/Twitter/Users/Avatar/default_profile_400x400_ao7twz.png"
     },
     avatarId: {
       type: String,

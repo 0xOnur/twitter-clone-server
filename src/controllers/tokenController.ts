@@ -1,15 +1,17 @@
-import jwt, { JwtPayload } from 'jsonwebtoken';
+import jwt from 'jsonwebtoken';
 
 interface Tokens {
-  [refreshToken: string]: {
+  [userId: string]: {
     status: string;
     accessToken: string;
     refreshToken: string;
   };
 }
 
-const refreshTokens: Tokens = {};
-console.log('refreshTokens: ', refreshTokens);
+const userTokens: Tokens = {};
+console.log('refreshTokens: ', userTokens);
+
+const time = Date.now();
 
 export const generateToken = (userId: string) => {
   try {
@@ -20,9 +22,9 @@ export const generateToken = (userId: string) => {
       accessToken,
       refreshToken,
     };
-    refreshTokens[refreshToken] = response;
+    userTokens[userId] = response;
 
-    console.log(refreshTokens);
+    console.log(userTokens);
     return {
       accessToken,
       refreshToken,
@@ -32,21 +34,19 @@ export const generateToken = (userId: string) => {
   }
 };
 
-export const updateToken = (refreshToken: string) => {
+export const updateToken = (userId: string, refreshToken: string) => {
   try {
     jwt.verify(refreshToken, process.env.JWT_REFRESH_TOKEN_SECRET!);
-    if (refreshToken && refreshToken in refreshTokens) {
-      const decoded = jwt.decode(refreshToken) as JwtPayload;
-      const userId = decoded._id;
+    if (refreshToken && refreshToken === userTokens[userId].refreshToken) {
       const accessToken = jwt.sign({ _id: userId }, process.env.JWT_SECRET!, {
         expiresIn: process.env.JWT_TOKEN_LIFE,
       });
       const response = {
-        status: 'Logged in',
+        status: `Updated accessToken at ${time}`,
         accessToken,
         refreshToken,
       };
-      refreshTokens[refreshToken] = response;
+      userTokens[userId] = response;
       return {
         accessToken,
         refreshToken,
@@ -55,6 +55,20 @@ export const updateToken = (refreshToken: string) => {
       return 'Refresh token is not valid';
     }
   } catch (error:any) {
+    return error.message;
+  }
+};
+
+
+export const deleteToken = (userId: string) => {
+  try {
+    if (userId && userId in userTokens) {
+      delete userTokens[userId];
+      console.log(`Token removed successfully for ${userId}`)
+    } else {
+      console.log("Token is not valid")
+    }
+  } catch (error: any) {
     return error.message;
   }
 };
