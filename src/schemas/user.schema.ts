@@ -14,6 +14,11 @@ interface IUser extends Document {
   cover?: string;
   coverId?: string;
   following: mongoose.Types.ObjectId[];
+  birthDay?: {
+    day: number;
+    month: number;
+    year: number;
+  }
   createdAt: Date;
   updatedAt: Date;
 }
@@ -57,7 +62,7 @@ const UserSchema: Schema = new Schema(
     },
     avatar: {
       type: String,
-      default: "https://res.cloudinary.com/dwcw9iftp/image/upload/v1682952193/Twitter/Users/Avatar/default_profile_400x400_ao7twz.png"
+      default: "https://res.cloudinary.com/dwcw9iftp/image/upload/v1683417676/Twitter/Users/Avatar/default_profile_400x400_dctbia.png"
     },
     avatarId: {
       type: String,
@@ -74,6 +79,22 @@ const UserSchema: Schema = new Schema(
         ref: "User",
       },
     ],
+    birthDay: {
+      day: {
+        type: Number,
+        min: 1,
+        max: 31,
+        },
+      month: {
+        type: Number,
+        min: 1,
+        max: 12,
+        },
+      year: {
+        type: Number,
+        min: 1900,
+        },
+    },
   },
   {
     timestamps: true,
