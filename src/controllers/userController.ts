@@ -2,7 +2,8 @@ import { Request, Response } from "express";
 import User from "../schemas/user.schema";
 import bcrypt from "bcrypt";
 import cloudinary from "cloudinary";
-import {generateToken, updateToken, deleteToken} from "./tokenController"
+import {generateToken, updateToken} from "./tokenController"
+import jwt from 'jsonwebtoken';
 
 
 // Avatar Options for cloudinary
@@ -12,6 +13,13 @@ const avatarOptions = {
     allowed_formats: ["jpg", "png", "jpeg", "gif"],
     quality: "auto:eco",
 };
+
+// Decoded Token Interface
+interface IDecoded {
+    _id: string;
+    iat: number;
+    exp: number;
+  }
 
 
 // Login User
@@ -37,15 +45,38 @@ export const LoginUser = async (req:Request, res:Response) => {
 };
 
 
-export const LogoutUser = async (req: Request, res: Response) => {
+
+// Update accessToken
+export const updateAccessToken = async (req: Request, res: Response) => {
     try {
         const userId = req.body.userId;
-        deleteToken(userId);
-        res.status(200).json({message: "Logged out"});
+        const refreshToken = req.headers['x-refresh-token'];
+        
+        if (!refreshToken) {
+            return res.status(400).json({ message: 'No refresh token provided' });
+        };
+
+        const decodedToken = jwt.verify(refreshToken as string, process.env.JWT_REFRESH_TOKEN_SECRET!) as IDecoded;
+        if (!decodedToken) {
+            return res.status(401).json({ message: 'Invalid refresh token' });
+        };
+
+        const userIdFromDB = await User.findById(userId).select("_id");
+
+        if (!userIdFromDB) {
+            return res.status(404).json({ message: 'User not found' });
+        };
+
+        if (userIdFromDB._id.toString() === decodedToken._id) {
+            const accessToken = updateToken(userId);
+            return res.status(200).json({ accessToken });
+        }else {
+            return res.status(401).json({ message: 'Invalid compare' });
+        }
     } catch (error: any) {
-        res.status(500).json({message: error.message});        
+        res.status(500).json({ message: error.message });
     }
-};
+}
 
 // Create a user
 export const createUser = async (req: Request, res: Response) => {
