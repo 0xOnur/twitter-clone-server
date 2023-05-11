@@ -1,7 +1,8 @@
 import mongoose, { Schema, Document } from "mongoose";
 import bcrypt from "bcrypt";
+import { ITweet } from "./tweet.schema";
 
-interface IUser extends Document {
+export interface IUser extends Document {
   displayName: string;
   username: string;
   email: string;
@@ -14,6 +15,7 @@ interface IUser extends Document {
   cover?: string;
   coverId?: string;
   following: mongoose.Types.ObjectId[];
+  followers?: IUser[]
   birthDay?: {
     day: number;
     month: number;

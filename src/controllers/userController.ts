@@ -1,9 +1,11 @@
 import { Request, Response } from "express";
-import User from "../schemas/user.schema";
 import bcrypt from "bcrypt";
 import cloudinary from "cloudinary";
-import {generateToken, updateToken} from "./tokenController"
 import jwt from 'jsonwebtoken';
+import {generateToken, updateToken} from "./tokenController"
+import User from "../schemas/user.schema";
+import Tweet from "../schemas/tweet.schema";
+
 
 
 // Avatar Options for cloudinary
@@ -169,6 +171,23 @@ export const usernameExist = async (req:Request, res:Response) => {
         }else {
             res.status(200).send(false);
         }
+    } catch (error: any) {
+        res.status(500).json({message: error.message});
+    }
+};
+
+// Get user
+export const getUser = async (req:Request, res: Response) => {
+    try {
+        const user = await User.findOne({username: req.params.username}).select('-password');
+        if (user) {
+            const followers = await User.find({ following: { $in: [user._id] } });
+            const userObject = user.toObject();
+            userObject.followers = followers;
+            res.status(200).json(userObject);
+        } else {
+            res.status(404).json({message: "User not found"});
+        };
     } catch (error: any) {
         res.status(500).json({message: error.message});
     }
