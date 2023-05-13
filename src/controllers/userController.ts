@@ -192,3 +192,17 @@ export const getUser = async (req:Request, res: Response) => {
         res.status(500).json({message: error.message});
     }
 };
+
+// Search User with username
+export const searchUser = async (req:Request, res:Response) => {
+    try {
+        const regex = new RegExp(req.params.username, 'i');
+        await User.find({username: {$regex: regex}})
+        .limit(10)
+        .then(searchResult => {
+            res.status(200).json(searchResult);
+        });
+    } catch (error: any) {
+        res.status(500).json({message: error.message});
+    }
+}
