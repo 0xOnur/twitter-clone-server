@@ -7,7 +7,6 @@ import User from "../schemas/user.schema";
 import Tweet from "../schemas/tweet.schema";
 
 
-
 // Avatar Options for cloudinary
 const avatarOptions = {
     use_filename: true,
@@ -205,4 +204,5 @@ export const searchUser = async (req:Request, res:Response) => {
     } catch (error: any) {
         res.status(500).json({message: error.message});
     }
-}
+};
+
