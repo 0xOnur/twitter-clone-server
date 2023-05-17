@@ -26,12 +26,18 @@ export const getTweetStats =async (req:Request, res:Response) => {
     }
 }
 
-//get Tweet
-export const getTweet = async (req: Request, res: Response) => {
+//Get specific Tweet
+export const getSpecificTweet = async (req: Request, res: Response) => {
     try {
         const tweet = await Tweet.findById(req.params.tweetId)
             .populate("author", "username displayName avatar isVerified")
-            .populate("originalTweet")
+            .populate({
+                path: "originalTweet",
+                populate: {
+                    path: "author",
+                    select: "username displayName avatar isVerified"
+                }
+            })
 
         if (!tweet) {
             res.status(404).json({ message: "Tweet not found" });
@@ -53,8 +59,42 @@ export const getUserTweets = async (req: Request, res: Response) => {
             res.status(404).json({ message: "User not found" });
             return;
         };
-        await Tweet.find({ author: userId, tweetType: "tweet" })
+        await Tweet.find({ author: userId, tweetType: {$in: ["tweet", "quote", "retweet"]}})
             .populate("author", "username displayName avatar isVerified")
+            .populate({
+                path: "originalTweet",
+                populate: {
+                    path: "author",
+                    select: "username displayName avatar isVerified"
+                }
+            })
+            .sort({ createdAt: -1 })
+            .then(tweets => {
+                res.status(200).json(tweets);
+            }
+        );
+    } catch (error: any) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// Get User Replies
+export const getUserReplies = async (req:Request, res: Response) => {
+    try {
+        const userId = await User.findOne({username: req.params.username}).select('_id');
+        if (!userId) {
+            res.status(404).json({ message: "User not found" });
+            return;
+        };
+        await Tweet.find({ author: userId, tweetType: "reply"})
+            .populate("author", "username displayName avatar isVerified")
+            .populate({
+                path: "originalTweet",
+                populate: {
+                    path: "author",
+                    select: "username displayName avatar isVerified"
+                }
+            })
             .sort({ createdAt: -1 })
             .then(tweets => {
                 res.status(200).json(tweets);
