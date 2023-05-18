@@ -9,9 +9,13 @@ import {
     usernameExist,
     getUser,
     searchUser,
+    followUser,
+    UnFollowUser,
 } from "../controllers/userController";
 import authMiddleware, { AuthenticatedRequest } from "../middlewares/authMiddleware";
 
+
+// http://localhost:5000/user/
 const userRoutes = express.Router();
 const upload = multer({storage: multer.diskStorage({})});
 
@@ -19,6 +23,9 @@ userRoutes.post("/update-token", updateAccessToken)
 
 userRoutes.post("/login", LoginUser);
 userRoutes.post("/create-user", upload.single('avatar'), createUser);
+
+userRoutes.put("/follow-user/:userId", authMiddleware, followUser);
+userRoutes.put("/unfollow-user/:userId", authMiddleware, UnFollowUser);
 
 userRoutes.get("/username-available/:username", usernameIsAvailable);
 userRoutes.get("/email-available/:email", emailIsAvailable);

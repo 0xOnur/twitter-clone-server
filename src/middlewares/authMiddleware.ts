@@ -3,11 +3,11 @@ import { Request, Response, NextFunction } from "express";
 
 // Extend the Request type and create a new type
 export interface AuthenticatedRequest extends Request {
-  user?: any; // Place your desired user type here
+  user?: IDecoded;
 }
 
 const authMiddleware = async (
-  req: AuthenticatedRequest, // Use the new type
+  req: AuthenticatedRequest,
   res: Response,
   next: NextFunction
 ) => {
@@ -23,8 +23,7 @@ const authMiddleware = async (
       if (err) {
         return res.status(401).json({ message: "Invalid token" });
       }
-
-      req.user = decoded;
+      req.user = decoded as IDecoded;
       next();
     });
   } catch (error: any) {

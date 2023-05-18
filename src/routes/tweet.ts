@@ -11,6 +11,8 @@ import {
     getUserReplies,
 } from "../controllers/tweetControlleer"
 
+
+// http://localhost:5000/tweet/
 const tweetRoutes = express.Router();
 const upload = multer({storage: multer.diskStorage({})});
 
