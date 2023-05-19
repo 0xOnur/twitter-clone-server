@@ -51,65 +51,11 @@ export const getSpecificTweet = async (req: Request, res: Response) => {
     }
 };
 
-// Get user Tweets
-export const getUserTweets = async (req: Request, res: Response) => {
-    try {
-        const userId = await User.findOne({username: req.params.username}).select('_id');
-        if (!userId) {
-            res.status(404).json({ message: "User not found" });
-            return;
-        };
-        await Tweet.find({ author: userId, tweetType: {$in: ["tweet", "quote", "retweet"]}})
-            .populate("author", "username displayName avatar isVerified")
-            .populate({
-                path: "originalTweet",
-                populate: {
-                    path: "author",
-                    select: "username displayName avatar isVerified"
-                }
-            })
-            .sort({ createdAt: -1 })
-            .then(tweets => {
-                res.status(200).json(tweets);
-            }
-        );
-    } catch (error: any) {
-        res.status(500).json({ message: error.message });
-    }
-};
-
-// Get User Replies
-export const getUserReplies = async (req:Request, res: Response) => {
-    try {
-        const userId = await User.findOne({username: req.params.username}).select('_id');
-        if (!userId) {
-            res.status(404).json({ message: "User not found" });
-            return;
-        };
-        await Tweet.find({ author: userId, tweetType: "reply"})
-            .populate("author", "username displayName avatar isVerified")
-            .populate({
-                path: "originalTweet",
-                populate: {
-                    path: "author",
-                    select: "username displayName avatar isVerified"
-                }
-            })
-            .sort({ createdAt: -1 })
-            .then(tweets => {
-                res.status(200).json(tweets);
-            }
-        );
-    } catch (error: any) {
-        res.status(500).json({ message: error.message });
-    }
-};
-
 // Get Tweet replies
 export const getTweetReplies = async(req: Request, res:Response) => {
     try {
         await Tweet.find({ originalTweet: req.params.tweetId, tweetType: "reply" })
-            .populate("author", "username displayName avatar")
+            .populate("author", "username displayName avatar isVerified")
             .sort({ createdAt: -1 })
             .then(replies => {
                 res.status(200).json(replies);
@@ -124,7 +70,7 @@ export const getTweetReplies = async(req: Request, res:Response) => {
 export const getTweetRetweets = async (req: Request, res: Response) => {
     try {
         await Tweet.find({ originalTweet: req.params.tweetId, tweetType: "retweet" })
-            .populate("author", "username displayName avatar")
+            .populate("author", "username displayName avatar isVerified")
             .sort({ createdAt: -1 })
             .then(retweets => {
                 res.status(200).json(retweets);
@@ -139,7 +85,7 @@ export const getTweetRetweets = async (req: Request, res: Response) => {
 export const getTweetQuotes =async (req: Request, res: Response) => {
     try {
         await Tweet.find({ originalTweet: req.params.tweetId, tweetType: "quote" })
-            .populate("author", "username displayName avatar")
+            .populate("author", "username displayName avatar isVerified")
             .sort({ createdAt: -1 })
             .then(quotes => {
                 res.status(200).json(quotes);
@@ -148,4 +94,4 @@ export const getTweetQuotes =async (req: Request, res: Response) => {
     } catch (error: any) {
         res.status(500).json({ message: error.message });
     }
-}
+};

@@ -11,6 +11,10 @@ import {
     searchUser,
     followUser,
     UnFollowUser,
+    getMediaOnlyTweets,
+    getUserTweets,
+    getUserReplies,
+    getUserLikes,
 } from "../controllers/userController";
 import authMiddleware, { AuthenticatedRequest } from "../middlewares/authMiddleware";
 
@@ -34,6 +38,11 @@ userRoutes.get("/username-exist/:username", usernameExist);
 
 userRoutes.get("/get-user/:username", getUser);
 userRoutes.get("/search-user/:username", searchUser);
+
+userRoutes.get("/get-user-tweets/:username", getUserTweets);
+userRoutes.get("/get-user-replies/:username", getUserReplies);
+userRoutes.get("/get-user-likes/:username", getUserLikes);
+userRoutes.get("/get-user-media-only-tweets/:username", getMediaOnlyTweets);
 
 
 

@@ -4,6 +4,7 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import cloudinary from "cloudinary";
 import User from "../schemas/user.schema";
+import Tweet from "../schemas/tweet.schema";
 import { generateToken, updateToken } from "./tokenController";
 
 // Avatar Options for cloudinary
@@ -248,6 +249,107 @@ export const UnFollowUser = async (req: AuthenticatedRequest, res: Response) => 
         } else {
             res.status(200).json({ message: "Already unfollowed" });
         }
+    } catch (error: any) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// Get user Tweets
+export const getUserTweets = async (req: Request, res: Response) => {
+    try {
+        const userId = await User.findOne({username: req.params.username}).select('_id');
+        if (!userId) {
+            res.status(404).json({ message: "User not found" });
+            return;
+        };
+        await Tweet.find({ author: userId, tweetType: {$in: ["tweet", "quote", "retweet"]}})
+            .populate("author", "username displayName avatar isVerified")
+            .populate({
+                path: "originalTweet",
+                populate: {
+                    path: "author",
+                    select: "username displayName avatar isVerified"
+                }
+            })
+            .sort({ createdAt: -1 })
+            .then(tweets => {
+                res.status(200).json(tweets);
+            }
+        );
+    } catch (error: any) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// Get Media only User Tweets
+export const getMediaOnlyTweets =async (req:Request, res: Response) => {
+    try {
+        const userId = await User.findOne({username: req.params.username}).select('_id');
+        if (!userId) {
+            res.status(404).json({ message: "User not found" });
+            return;
+        };
+        await Tweet.find({ author: userId, media: {$exists: true, $ne: []}})
+            .populate("author", "username displayName avatar isVerified")
+            .populate({
+                path: "originalTweet",
+                populate: {
+                    path: "author",
+                    select: "username displayName avatar isVerified"
+                }
+            })
+            .sort({ createdAt: -1 })
+            .then(tweets => {
+                res.status(200).json(tweets);
+            }
+        );
+    } catch (error: any) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// Get User Replies
+export const getUserReplies = async (req:Request, res: Response) => {
+    try {
+        const userId = await User.findOne({username: req.params.username}).select('_id');
+        if (!userId) {
+            res.status(404).json({ message: "User not found" });
+            return;
+        };
+        await Tweet.find({ author: userId, tweetType: "reply"})
+            .populate("author", "username displayName avatar isVerified")
+            .populate({
+                path: "originalTweet",
+                populate: {
+                    path: "author",
+                    select: "username displayName avatar isVerified"
+                }
+            })
+            .sort({ createdAt: -1 })
+            .then(tweets => {
+                res.status(200).json(tweets);
+            }
+        );
+    } catch (error: any) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// Get User Liked Tweets
+export const getUserLikes =async (req: Request, res: Response) => {
+    try {
+        const userId = await User.findOne({username: req.params.username}).select('_id');
+        if (!userId) {
+            res.status(404).json({ message: "User not found" });
+            return;
+        };
+        await Tweet.find({ likes: {$in: [userId]}})
+            .populate("author", "username displayName avatar isVerified")
+            .sort({ createdAt: -1 })
+            .then(tweets => {
+                res.status(200).json(tweets);
+            }
+        );
     } catch (error: any) {
         res.status(500).json({ message: error.message });
     }
