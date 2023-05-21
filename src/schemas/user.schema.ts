@@ -10,6 +10,7 @@ export interface IUser extends Document {
   password: string;
   bio?: string;
   location?: string;
+  website?: string;
   avatar?: string;
   avatarId?: string;
   cover?: string;
@@ -30,6 +31,7 @@ const UserSchema: Schema = new Schema(
     displayName: {
       type: String,
       required: true,
+      maxLength: 50,
     },
     username: {
       type: String,
@@ -61,6 +63,11 @@ const UserSchema: Schema = new Schema(
         type: String,
         trim: true,
         maxLength: 30,
+    },
+    website: {
+        type: String,
+        trim: true,
+        maxLength: 100,
     },
     avatar: {
       type: String,

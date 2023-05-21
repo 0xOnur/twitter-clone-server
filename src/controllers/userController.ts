@@ -2,355 +2,448 @@ import { Request, Response } from "express";
 import { Types } from "mongoose";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import cloudinary from "cloudinary";
+import cloudinary, { UploadApiOptions } from "cloudinary";
 import User from "../schemas/user.schema";
 import Tweet from "../schemas/tweet.schema";
 import { generateToken, updateToken } from "./tokenController";
+import { error } from "console";
 
 // Avatar Options for cloudinary
-const avatarOptions = {
-    use_filename: true,
-    folder: "Twitter/Users/Avatar",
-    allowed_formats: ["jpg", "png", "jpeg", "gif"],
-    quality: "auto:eco",
+const avatarOptions: UploadApiOptions = {
+  use_filename: true,
+  folder: "Twitter/Users/Avatar",
+  allowed_formats: ["jpg", "png", "jpeg", "gif"],
+  quality: "auto",
+};
+
+// Cover Options for cloudinary
+const coverOptions = {
+  use_filename: true,
+  folder: "Twitter/Users/Cover",
+  allowed_formats: ["jpg", "png", "jpeg", "gif"],
+  quality: "auto",
 };
 
 // Extend the Request type and create a new type
 export interface AuthenticatedRequest extends Request {
-    user?: IDecoded;
+  user?: IDecoded;
+  files?: any;
 }
 
 // Login User
 export const LoginUser = async (req: Request, res: Response) => {
-    try {
-        console.log(req.body);
+  try {
+    console.log(req.body);
 
-        const user = await User.findOne({ username: req.body.username });
-        if (!user) {
-            res.status(404).json({ message: "User not found" });
-            return;
-        }
-        const isPasswordCorrect = await bcrypt.compare(
-            req.body.password,
-            user.password
-        );
-        if (!isPasswordCorrect) {
-            res.status(401).json({ message: "Invalid password" });
-            return;
-        }
-        const tokens = generateToken(user._id);
-        res.status(200).json({ user, tokens });
-    } catch (error: any) {
-        res.status(500).json({ message: error.message });
+    const user = await User.findOne({ username: req.body.username });
+    if (!user) {
+      res.status(404).json({ message: "User not found" });
+      return;
     }
+    const isPasswordCorrect = await bcrypt.compare(
+      req.body.password,
+      user.password
+    );
+    if (!isPasswordCorrect) {
+      res.status(401).json({ message: "Invalid password" });
+      return;
+    }
+    const tokens = generateToken(user._id);
+    res.status(200).json({ user, tokens });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
 };
 
 // Update accessToken
 export const updateAccessToken = async (req: Request, res: Response) => {
-    try {
-        const userId = req.body.userId;
-        const refreshToken = req.headers["x-refresh-token"];
+  try {
+    const userId = req.body.userId;
+    const refreshToken = req.headers["x-refresh-token"];
 
-        if (!refreshToken) {
-            return res.status(400).json({ message: "No refresh token provided" });
-        }
-
-        const decodedToken = jwt.verify(
-            refreshToken as string,
-            process.env.JWT_REFRESH_TOKEN_SECRET!
-        ) as IDecoded;
-        if (!decodedToken) {
-            return res.status(401).json({ message: "Invalid refresh token" });
-        }
-
-        const userIdFromDB = await User.findById(userId).select("_id");
-
-        if (!userIdFromDB) {
-            return res.status(404).json({ message: "User not found" });
-        }
-
-        if (userIdFromDB._id.toString() === decodedToken._id) {
-            const accessToken = updateToken(userId);
-            return res.status(200).json({ accessToken });
-        } else {
-            return res.status(401).json({ message: "Invalid compare" });
-        }
-    } catch (error: any) {
-        res.status(500).json({ message: error.message });
+    if (!refreshToken) {
+      return res.status(400).json({ message: "No refresh token provided" });
     }
+
+    const decodedToken = jwt.verify(
+      refreshToken as string,
+      process.env.JWT_REFRESH_TOKEN_SECRET!
+    ) as IDecoded;
+    if (!decodedToken) {
+      return res.status(401).json({ message: "Invalid refresh token" });
+    }
+
+    const userIdFromDB = await User.findById(userId).select("_id");
+
+    if (!userIdFromDB) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (userIdFromDB._id.toString() === decodedToken._id) {
+      const accessToken = updateToken(userId);
+      return res.status(200).json({ accessToken });
+    } else {
+      return res.status(401).json({ message: "Invalid compare" });
+    }
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
 };
 
 // Create a User
 export const createUser = async (req: Request, res: Response) => {
-    try {
-        console.log(req.file);
-        console.log(req.body);
+  try {
+    console.log(req.file);
+    console.log(req.body);
 
-        const emailRegex = /^\S+@\S+\.\S+$/;
-        const isValid = emailRegex.test(req.body.email);
-        if (!isValid) {
-            res.status(400).json({ message: "Email is not valid" });
-            return;
-        }
-
-        const user = new User({
-            username: req.body.username,
-            displayName: req.body.displayName,
-            email: req.body.email,
-            password: req.body.password,
-            bio: req.body?.bio,
-            isVerified: false,
-            birthDay: {
-                day: req.body?.birthDay?.day,
-                month: req.body?.birthDay?.month,
-                year: req.body?.birthDay?.year,
-            },
-        });
-
-        await user.validate();
-
-        if (req.file) {
-            const result = await cloudinary.v2.uploader.upload(
-                req.file.path,
-                avatarOptions
-            );
-            user.avatar = result.secure_url;
-            user.avatarId = result.public_id;
-        }
-
-        await user.save();
-        const tokens = generateToken(user._id);
-        res.status(201).json({ user, tokens });
-    } catch (error: any) {
-        if (error.name === "ValidationError") {
-            res
-                .status(400)
-                .json({ message: "Validation Error", errors: error.errors });
-        } else {
-            res.status(500).json({ message: error.message });
-        }
+    const emailRegex = /^\S+@\S+\.\S+$/;
+    const isValid = emailRegex.test(req.body.email);
+    if (!isValid) {
+      res.status(400).json({ message: "Email is not valid" });
+      return;
     }
+
+    const user = new User({
+      username: req.body.username,
+      displayName: req.body.displayName,
+      email: req.body.email,
+      password: req.body.password,
+      bio: req.body?.bio,
+      isVerified: false,
+      birthDay: {
+        day: req.body?.birthDay?.day,
+        month: req.body?.birthDay?.month,
+        year: req.body?.birthDay?.year,
+      },
+    });
+
+    await user.validate();
+
+    if (req.file) {
+      const result = await cloudinary.v2.uploader.upload(
+        req.file.path,
+        avatarOptions
+      );
+      user.avatar = result.secure_url;
+      user.avatarId = result.public_id;
+    }
+
+    await user.save();
+    const tokens = generateToken(user._id);
+    res.status(201).json({ user, tokens });
+  } catch (error: any) {
+    if (error.name === "ValidationError") {
+      res
+        .status(400)
+        .json({ message: "Validation Error", errors: error.errors });
+    } else {
+      res.status(500).json({ message: error.message });
+    }
+  }
 };
 
-// Check username is Available
-export const usernameIsAvailable = async (req: Request, res: Response) => {
-    try {
-        console.log(req.params);
-        const user = await User.findOne({ username: req.params.username });
-        if (user) {
-            res.status(200).send(false);
-        } else {
-            res.status(200).send(true);
-        }
-    } catch (error: any) {
-        res.status(500).json({ message: error.message });
+// Update User
+export const updateUser = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const user = await User.findById(req.user?._id);
+    if (!user) {
+      res.status(404).json({ message: "User not found" });
+      return;
     }
-};
+    console.log(req.body.cover);
 
-// Check email is Available with valid format
-export const emailIsAvailable = async (req: Request, res: Response) => {
-    try {
-        console.log(req.params);
-        const emailRegex = /^\S+@\S+\.\S+$/;
-        const isValid = emailRegex.test(req.params.email);
-        const user = await User.findOne({ email: req.params.email });
-        if (user || !isValid) {
-            res.status(200).send(false);
-        } else {
-            res.status(200).send(true);
-        }
-    } catch (error: any) {
-        res.status(500).json({ message: error.message });
-    }
-};
+    const newUserData = {
+      cover: req.body.cover === "null" ? null : req.body.cover,
+      coverId: user.coverId,
+      avatar: req.body.avatar === "null" ? null : user.avatar,
+      avatarId: user.avatarId,
+      displayName: req.body?.displayName,
+      username: req.body?.username,
+      bio: req.body?.bio,
+      location: req.body?.location,
+      website: req.body?.website,
+    };
 
-// Check username exist
-export const usernameExist = async (req: Request, res: Response) => {
-    try {
-        console.log(req.params);
-        const user = await User.findOne({ username: req.params.username });
-        if (user) {
-            res.status(200).send(true);
-        } else {
-            res.status(200).send(false);
+    if (req.files) {
+      if (req.files.avatar) {
+        //remove old avatar from clodinary
+        if (user.avatarId) {
+          await cloudinary.v2.uploader.destroy(user.avatarId);
         }
-    } catch (error: any) {
-        res.status(500).json({ message: error.message });
+        //upload new avatar to cloudinary
+        const result = await cloudinary.v2.uploader.upload(
+          req.files.avatar[0].path,
+          avatarOptions,
+          (error, result) => {
+            if (error) {
+              console.log(error);
+            }
+            if (result) {
+              //update avatar and id in db
+              newUserData.avatar = result.secure_url;
+              newUserData.avatarId = result.public_id;
+            }
+          }
+        );
+      }
+      if (req.files.cover) {
+        //remove old cover from clodinary
+        if (user.coverId) {
+          await cloudinary.v2.uploader.destroy(user.coverId);
+        }
+        //upload new cover to cloudinary
+        const result = await cloudinary.v2.uploader.upload(
+          req.files.cover[0].path,
+          coverOptions,
+          (error, result) => {
+            if (error) {
+              console.log(error);
+            }
+            if (result) {
+              //update cover and id in db
+              newUserData.cover = result.secure_url;
+              newUserData.coverId = result.public_id;
+            }
+          }
+        );
+      }
     }
+    await User.findByIdAndUpdate(req.user?._id, newUserData, { new: true });
+    res.status(200).json({ message: "User updated" });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
 };
 
 // Get User
 export const getUser = async (req: Request, res: Response) => {
-    try {
-        const user = await User.findOne({ username: req.params.username }).select(
-            "-password"
-        );
-        if (user) {
-            const followers = await User.find({ following: { $in: [user._id] } });
-            const userObject = user.toObject();
-            userObject.followers = followers;
-            res.status(200).json(userObject);
-        } else {
-            res.status(404).json({ message: "User not found" });
-        }
-    } catch (error: any) {
-        res.status(500).json({ message: error.message });
+  try {
+    const user = await User.findOne({ username: req.params.username }).select(
+      "-password"
+    );
+    if (user) {
+      const followers = await User.find({ following: { $in: [user._id] } });
+      const userObject = user.toObject();
+      userObject.followers = followers;
+      res.status(200).json(userObject);
+    } else {
+      res.status(404).json({ message: "User not found" });
     }
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Check username is Available
+export const usernameIsAvailable = async (req: Request, res: Response) => {
+  try {
+    console.log(req.params);
+    const user = await User.findOne({ username: req.params.username });
+    if (user) {
+      res.status(200).send(false);
+    } else {
+      res.status(200).send(true);
+    }
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Check email is Available with valid format
+export const emailIsAvailable = async (req: Request, res: Response) => {
+  try {
+    console.log(req.params);
+    const emailRegex = /^\S+@\S+\.\S+$/;
+    const isValid = emailRegex.test(req.params.email);
+    const user = await User.findOne({ email: req.params.email });
+    if (user || !isValid) {
+      res.status(200).send(false);
+    } else {
+      res.status(200).send(true);
+    }
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Check username exist
+export const usernameExist = async (req: Request, res: Response) => {
+  try {
+    console.log(req.params);
+    const user = await User.findOne({ username: req.params.username });
+    if (user) {
+      res.status(200).send(true);
+    } else {
+      res.status(200).send(false);
+    }
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
 };
 
 // Search User with username
 export const searchUser = async (req: Request, res: Response) => {
-    try {
-        const regex = new RegExp(req.params.username, "i");
-        await User.find({ username: { $regex: regex } })
-            .limit(10)
-            .then((searchResult) => {
-                res.status(200).json(searchResult);
-            });
-    } catch (error: any) {
-        res.status(500).json({ message: error.message });
-    }
+  try {
+    const regex = new RegExp(req.params.username, "i");
+    await User.find({ username: { $regex: regex } })
+      .limit(10)
+      .then((searchResult) => {
+        res.status(200).json(searchResult);
+      });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
 };
 
 // Follow User
 export const followUser = async (req: AuthenticatedRequest, res: Response) => {
-    try {
-        const user = await User.findById(req.user?._id);
-        if (!user) {
-            return res.status(404).json({ message: "User not found" });
-        }
-        if (user.following.includes(new Types.ObjectId(req.params.userId))) {
-            return res.status(200).json({ message: "Already followed" });
-        }
-
-        await User.findByIdAndUpdate(user._id, {
-            $push: { following: req.params.userId },
-        }).then(() => {
-            res.status(200).json({ message: "Followed" });
-        });
-    } catch (error: any) {
-        res.status(500).json({ message: error.message });
+  try {
+    const user = await User.findById(req.user?._id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
     }
+    if (user.following.includes(new Types.ObjectId(req.params.userId))) {
+      return res.status(200).json({ message: "Already followed" });
+    }
+
+    await User.findByIdAndUpdate(user._id, {
+      $push: { following: req.params.userId },
+    }).then(() => {
+      res.status(200).json({ message: "Followed" });
+    });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
 };
 
 // UnFollowUser User
-export const UnFollowUser = async (req: AuthenticatedRequest, res: Response) => {
-    try {
-        const user = await User.findById(req.user?._id);
-        if (!user) {
-            return res.status(404).json({ message: "User not found" });
-        }
-        if (user.following.includes(new Types.ObjectId(req.params.userId))) {
-            await User.findByIdAndUpdate(user._id, {
-                $pull: { following: req.params.userId },
-            }).then(() => {
-                res.status(200).json({ message: "Unfollowed" });
-            });
-        } else {
-            res.status(200).json({ message: "Already unfollowed" });
-        }
-    } catch (error: any) {
-        res.status(500).json({ message: error.message });
+export const UnFollowUser = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
+  try {
+    const user = await User.findById(req.user?._id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
     }
+    if (user.following.includes(new Types.ObjectId(req.params.userId))) {
+      await User.findByIdAndUpdate(user._id, {
+        $pull: { following: req.params.userId },
+      }).then(() => {
+        res.status(200).json({ message: "Unfollowed" });
+      });
+    } else {
+      res.status(200).json({ message: "Already unfollowed" });
+    }
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
 };
 
 // Get user Tweets
 export const getUserTweets = async (req: Request, res: Response) => {
-    try {
-        const userId = await User.findOne({username: req.params.username}).select('_id');
-        if (!userId) {
-            res.status(404).json({ message: "User not found" });
-            return;
-        };
-        await Tweet.find({ author: userId, tweetType: {$in: ["tweet", "quote", "retweet"]}})
-            .populate("author", "username displayName avatar isVerified")
-            .populate({
-                path: "originalTweet",
-                populate: {
-                    path: "author",
-                    select: "username displayName avatar isVerified"
-                }
-            })
-            .sort({ createdAt: -1 })
-            .then(tweets => {
-                res.status(200).json(tweets);
-            }
-        );
-    } catch (error: any) {
-        res.status(500).json({ message: error.message });
+  try {
+    const userId = await User.findOne({ username: req.params.username }).select(
+      "_id"
+    );
+    if (!userId) {
+      res.status(404).json({ message: "User not found" });
+      return;
     }
+    await Tweet.find({
+      author: userId,
+      tweetType: { $in: ["tweet", "quote", "retweet"] },
+    })
+      .populate("author", "username displayName avatar isVerified")
+      .populate({
+        path: "originalTweet",
+        populate: {
+          path: "author",
+          select: "username displayName avatar isVerified",
+        },
+      })
+      .sort({ createdAt: -1 })
+      .then((tweets) => {
+        res.status(200).json(tweets);
+      });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
 };
 
 // Get Media only User Tweets
-export const getMediaOnlyTweets =async (req:Request, res: Response) => {
-    try {
-        const userId = await User.findOne({username: req.params.username}).select('_id');
-        if (!userId) {
-            res.status(404).json({ message: "User not found" });
-            return;
-        };
-        await Tweet.find({ author: userId, media: {$exists: true, $ne: []}})
-            .populate("author", "username displayName avatar isVerified")
-            .populate({
-                path: "originalTweet",
-                populate: {
-                    path: "author",
-                    select: "username displayName avatar isVerified"
-                }
-            })
-            .sort({ createdAt: -1 })
-            .then(tweets => {
-                res.status(200).json(tweets);
-            }
-        );
-    } catch (error: any) {
-        res.status(500).json({ message: error.message });
+export const getMediaOnlyTweets = async (req: Request, res: Response) => {
+  try {
+    const userId = await User.findOne({ username: req.params.username }).select(
+      "_id"
+    );
+    if (!userId) {
+      res.status(404).json({ message: "User not found" });
+      return;
     }
+    await Tweet.find({ author: userId, media: { $exists: true, $ne: [] } })
+      .populate("author", "username displayName avatar isVerified")
+      .populate({
+        path: "originalTweet",
+        populate: {
+          path: "author",
+          select: "username displayName avatar isVerified",
+        },
+      })
+      .sort({ createdAt: -1 })
+      .then((tweets) => {
+        res.status(200).json(tweets);
+      });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
 };
 
 // Get User Replies
-export const getUserReplies = async (req:Request, res: Response) => {
-    try {
-        const userId = await User.findOne({username: req.params.username}).select('_id');
-        if (!userId) {
-            res.status(404).json({ message: "User not found" });
-            return;
-        };
-        await Tweet.find({ author: userId, tweetType: "reply"})
-            .populate("author", "username displayName avatar isVerified")
-            .populate({
-                path: "originalTweet",
-                populate: {
-                    path: "author",
-                    select: "username displayName avatar isVerified"
-                }
-            })
-            .sort({ createdAt: -1 })
-            .then(tweets => {
-                res.status(200).json(tweets);
-            }
-        );
-    } catch (error: any) {
-        res.status(500).json({ message: error.message });
+export const getUserReplies = async (req: Request, res: Response) => {
+  try {
+    const userId = await User.findOne({ username: req.params.username }).select(
+      "_id"
+    );
+    if (!userId) {
+      res.status(404).json({ message: "User not found" });
+      return;
     }
+    await Tweet.find({ author: userId, tweetType: "reply" })
+      .populate("author", "username displayName avatar isVerified")
+      .populate({
+        path: "originalTweet",
+        populate: {
+          path: "author",
+          select: "username displayName avatar isVerified",
+        },
+      })
+      .sort({ createdAt: -1 })
+      .then((tweets) => {
+        res.status(200).json(tweets);
+      });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
 };
 
 // Get User Liked Tweets
-export const getUserLikes =async (req: Request, res: Response) => {
-    try {
-        const userId = await User.findOne({username: req.params.username}).select('_id');
-        if (!userId) {
-            res.status(404).json({ message: "User not found" });
-            return;
-        };
-        await Tweet.find({ likes: {$in: [userId]}})
-            .populate("author", "username displayName avatar isVerified")
-            .sort({ createdAt: -1 })
-            .then(tweets => {
-                res.status(200).json(tweets);
-            }
-        );
-    } catch (error: any) {
-        res.status(500).json({ message: error.message });
+export const getUserLikes = async (req: Request, res: Response) => {
+  try {
+    const userId = await User.findOne({ username: req.params.username }).select(
+      "_id"
+    );
+    if (!userId) {
+      res.status(404).json({ message: "User not found" });
+      return;
     }
+    await Tweet.find({ likes: { $in: [userId] } })
+      .populate("author", "username displayName avatar isVerified")
+      .sort({ createdAt: -1 })
+      .then((tweets) => {
+        res.status(200).json(tweets);
+      });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
 };
