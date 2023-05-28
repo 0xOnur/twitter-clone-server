@@ -1,14 +1,7 @@
 import { Request, Response } from "express";
-import cloudinary from "cloudinary";
-import User from "../schemas/user.schema";
 import Tweet from "../schemas/tweet.schema";
-
-const tweetMediaOption = {
-    use_filename: true,
-    folder: "Twitter/Users/Avatar",
-    allowed_formats: ["jpg", "png", "jpeg", "gif"],
-    quality: "auto:eco",
-};
+import { AuthenticatedRequest } from "./userController";
+import { Types } from "mongoose";
 
 // Count tweet actions
 export const getTweetStats =async (req:Request, res:Response) => {
@@ -93,5 +86,43 @@ export const getTweetQuotes =async (req: Request, res: Response) => {
         );
     } catch (error: any) {
         res.status(500).json({ message: error.message });
+    }
+};
+
+// Like Tweet
+export const likeTweet = async (req: AuthenticatedRequest, res: Response) => {
+    try {
+        const tweet = await Tweet.findById(req.params.tweetId);
+        if (!tweet) {
+            res.status(404).json({ message: "Tweet not found" });
+            return;
+        }
+        if (tweet.likes?.includes(new Types.ObjectId(req.user?._id))) {
+            res.status(400).json({ message: "You already liked this tweet" });
+            return;
+        }
+        await Tweet.findByIdAndUpdate(req.params.tweetId, { $push: { likes: req.user?._id } }, { new: true });
+        res.status(200).json({ message: "Tweet liked" });
+    } catch (error: any) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// Unlike Tweet
+export const unlikeTweet = async (req: AuthenticatedRequest, res: Response) => {
+    try {
+        const tweet = await Tweet.findById(req.params.tweetId);
+        if (!tweet) {
+            res.status(404).json({ message: "Tweet not found" });
+            return;
+        }
+        if (!tweet.likes?.includes(new Types.ObjectId(req.user?._id))) {
+            res.status(400).json({ message: "You didn't like this tweet" });
+            return;
+        }
+        await Tweet.findByIdAndUpdate(req.params.tweetId, { $pull: { likes: req.user?._id } }, { new: true });
+        res.status(200).json({ message: "Tweet unliked" });
+    } catch (error) {
+        
     }
 };

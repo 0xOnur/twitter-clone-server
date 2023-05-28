@@ -12,9 +12,7 @@ export interface IUser extends Document {
   location?: string;
   website?: string;
   avatar?: string;
-  avatarId?: string;
   cover?: string;
-  coverId?: string;
   following: mongoose.Types.ObjectId[];
   followers?: IUser[]
   birthDay?: {
@@ -73,13 +71,7 @@ const UserSchema: Schema = new Schema(
       type: String,
       default: "https://res.cloudinary.com/dwcw9iftp/image/upload/v1683417676/Twitter/Users/Avatar/default_profile_400x400_dctbia.png"
     },
-    avatarId: {
-      type: String,
-    },
     cover: {
-      type: String,
-    },
-    coverId: {
       type: String,
     },
     following: [

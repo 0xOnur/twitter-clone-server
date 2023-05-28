@@ -23,12 +23,14 @@ import authMiddleware, {
 
 // http://localhost:5000/user/
 const userRoutes = express.Router();
-const upload = multer({ storage: multer.diskStorage({}) });
+const storage = multer.memoryStorage();
+const upload = multer({ storage: storage });
 
 userRoutes.post("/update-token", updateAccessToken);
 
 userRoutes.post("/login", LoginUser);
 userRoutes.post("/create-user", upload.single("avatar"), createUser);
+
 // update user with cover and avatar images
 userRoutes.put(
   "/update-user/",

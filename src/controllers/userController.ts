@@ -2,27 +2,10 @@ import { Request, Response } from "express";
 import { Types } from "mongoose";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import cloudinary, { UploadApiOptions } from "cloudinary";
 import User from "../schemas/user.schema";
 import Tweet from "../schemas/tweet.schema";
 import { generateToken, updateToken } from "./tokenController";
-import { error } from "console";
-
-// Avatar Options for cloudinary
-const avatarOptions: UploadApiOptions = {
-  use_filename: true,
-  folder: "Twitter/Users/Avatar",
-  allowed_formats: ["jpg", "png", "jpeg", "gif"],
-  quality: "auto",
-};
-
-// Cover Options for cloudinary
-const coverOptions = {
-  use_filename: true,
-  folder: "Twitter/Users/Cover",
-  allowed_formats: ["jpg", "png", "jpeg", "gif"],
-  quality: "auto",
-};
+import { uploadFile, deleteFile } from "../services/aws";
 
 // Extend the Request type and create a new type
 export interface AuthenticatedRequest extends Request {
@@ -81,7 +64,7 @@ export const updateAccessToken = async (req: Request, res: Response) => {
 
     if (userIdFromDB._id.toString() === decodedToken._id) {
       const accessToken = updateToken(userId);
-      return res.status(200).json({ accessToken });
+      return res.status(200).json(accessToken);
     } else {
       return res.status(401).json({ message: "Invalid compare" });
     }
@@ -120,12 +103,12 @@ export const createUser = async (req: Request, res: Response) => {
     await user.validate();
 
     if (req.file) {
-      const result = await cloudinary.v2.uploader.upload(
-        req.file.path,
-        avatarOptions
-      );
-      user.avatar = result.secure_url;
-      user.avatarId = result.public_id;
+      await uploadFile({
+        file: req.file,
+        folder: `Users/${user._id}`,
+      }).then((res) => {
+        user.avatar = res?.url;
+      });
     }
 
     await user.save();
@@ -150,13 +133,9 @@ export const updateUser = async (req: AuthenticatedRequest, res: Response) => {
       res.status(404).json({ message: "User not found" });
       return;
     }
-    console.log(req.body.cover);
-
     const newUserData = {
-      cover: req.body.cover === "null" ? null : req.body.cover,
-      coverId: user.coverId,
+      cover: req.body.cover,
       avatar: req.body.avatar === "null" ? null : user.avatar,
-      avatarId: user.avatarId,
       displayName: req.body?.displayName,
       username: req.body?.username,
       bio: req.body?.bio,
@@ -164,50 +143,42 @@ export const updateUser = async (req: AuthenticatedRequest, res: Response) => {
       website: req.body?.website,
     };
 
+    //delete old avatar from aws
+    if ((req.body.avatar === "null" || req.files.avatar) && user.avatar) {
+      //get path from url
+      const path = user.avatar.split("/").slice(3).join("/");
+      await deleteFile(path);
+    }
+
+    // delete old cover from aws
+    if ((req.body.cover === "null" || req.files.cover) && user.cover) {
+      //get path from url
+      const path = user.cover.split("/").slice(3).join("/");
+      await deleteFile(path);
+    }
+
     if (req.files) {
       if (req.files.avatar) {
-        //remove old avatar from clodinary
-        if (user.avatarId) {
-          await cloudinary.v2.uploader.destroy(user.avatarId);
-        }
-        //upload new avatar to cloudinary
-        const result = await cloudinary.v2.uploader.upload(
-          req.files.avatar[0].path,
-          avatarOptions,
-          (error, result) => {
-            if (error) {
-              console.log(error);
-            }
-            if (result) {
-              //update avatar and id in db
-              newUserData.avatar = result.secure_url;
-              newUserData.avatarId = result.public_id;
-            }
-          }
-        );
+        const file: Express.Multer.File = req.files.avatar[0];
+        await uploadFile({
+          file: file,
+          folder: `Users/${user._id}`,
+        }).then((res) => {
+          newUserData.avatar = res?.url;
+        });
       }
       if (req.files.cover) {
-        //remove old cover from clodinary
-        if (user.coverId) {
-          await cloudinary.v2.uploader.destroy(user.coverId);
-        }
-        //upload new cover to cloudinary
-        const result = await cloudinary.v2.uploader.upload(
-          req.files.cover[0].path,
-          coverOptions,
-          (error, result) => {
-            if (error) {
-              console.log(error);
-            }
-            if (result) {
-              //update cover and id in db
-              newUserData.cover = result.secure_url;
-              newUserData.coverId = result.public_id;
-            }
-          }
-        );
+        const file: Express.Multer.File = req.files.cover[0];
+        await uploadFile({
+          file: file,
+          folder: `Users/${user._id}`,
+        }).then((res) => {
+          newUserData.cover = res?.url;
+        });
       }
     }
+    console.log(newUserData);
+
     await User.findByIdAndUpdate(req.user?._id, newUserData, { new: true });
     res.status(200).json({ message: "User updated" });
   } catch (error: any) {
@@ -354,15 +325,8 @@ export const getUserTweets = async (req: Request, res: Response) => {
       author: userId,
       tweetType: { $in: ["tweet", "quote", "retweet"] },
     })
-      .populate("author", "username displayName avatar isVerified")
-      .populate({
-        path: "originalTweet",
-        populate: {
-          path: "author",
-          select: "username displayName avatar isVerified",
-        },
-      })
       .sort({ createdAt: -1 })
+      .select("_id")
       .then((tweets) => {
         res.status(200).json(tweets);
       });
@@ -382,15 +346,8 @@ export const getMediaOnlyTweets = async (req: Request, res: Response) => {
       return;
     }
     await Tweet.find({ author: userId, media: { $exists: true, $ne: [] } })
-      .populate("author", "username displayName avatar isVerified")
-      .populate({
-        path: "originalTweet",
-        populate: {
-          path: "author",
-          select: "username displayName avatar isVerified",
-        },
-      })
       .sort({ createdAt: -1 })
+      .select("_id")
       .then((tweets) => {
         res.status(200).json(tweets);
       });
@@ -410,15 +367,8 @@ export const getUserReplies = async (req: Request, res: Response) => {
       return;
     }
     await Tweet.find({ author: userId, tweetType: "reply" })
-      .populate("author", "username displayName avatar isVerified")
-      .populate({
-        path: "originalTweet",
-        populate: {
-          path: "author",
-          select: "username displayName avatar isVerified",
-        },
-      })
       .sort({ createdAt: -1 })
+      .select("_id")
       .then((tweets) => {
         res.status(200).json(tweets);
       });
@@ -438,8 +388,8 @@ export const getUserLikes = async (req: Request, res: Response) => {
       return;
     }
     await Tweet.find({ likes: { $in: [userId] } })
-      .populate("author", "username displayName avatar isVerified")
       .sort({ createdAt: -1 })
+      .select("_id")
       .then((tweets) => {
         res.status(200).json(tweets);
       });

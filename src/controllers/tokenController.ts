@@ -30,10 +30,7 @@ export const updateToken = (userId: string) => {
       accessToken: accessToken,
     };
     console.log(log);
-
-    return {
-      accessToken,
-    };
+    return accessToken
   } catch (error) {
     
   }
