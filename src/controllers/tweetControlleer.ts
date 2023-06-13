@@ -7,13 +7,13 @@ import { Types } from "mongoose";
 export const getTweetStats =async (req:Request, res:Response) => {
     try {
         const tweetId = req.params.tweetId;
-        const replyCount = await Tweet.find({originalTweet: tweetId, tweetType: "reply"})
-        .countDocuments();
-        const retweetCount = await Tweet.find({originalTweet: tweetId, tweetType: "retweet"})
-        .countDocuments();
-        const quoteCount = await Tweet.find({originalTweet: tweetId, tweetType: "quote"})
-        .countDocuments();
-        res.status(200).json({replyCount, retweetCount, quoteCount});
+        const replyStats = await Tweet.find({originalTweet: tweetId, tweetType: "reply"})
+        .select("author");
+        const retweetStats = await Tweet.find({originalTweet: tweetId, tweetType: "retweet"})
+        .select("author");
+        const quoteStats = await Tweet.find({originalTweet: tweetId, tweetType: "quote"})
+        .select("author");
+        res.status(200).json({replyStats, retweetStats, quoteStats});
     } catch (error: any) {
         res.status(500).json({ message: error.message });
     }

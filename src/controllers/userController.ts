@@ -193,7 +193,8 @@ export const getUser = async (req: Request, res: Response) => {
       "-password"
     );
     if (user) {
-      const followers = await User.find({ following: { $in: [user._id] } });
+      const followers = await User.find({ following: { $in: [user._id] } })
+        .select("_id")
       const userObject = user.toObject();
       userObject.followers = followers;
       res.status(200).json(userObject);
@@ -204,6 +205,38 @@ export const getUser = async (req: Request, res: Response) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+// Get User Followings
+export const getUserFollowings = async (req: Request, res: Response) => {
+  try {
+    const user = await User.findOne({username: req.params.username})
+    if (user) {
+      const followings = await User.find({_id: {$in: user.following}})
+      .select("username displayName avatar cover bio isVerified");
+      res.status(200).json(followings);
+    }else{
+      res.status(404).json({message: "User not found"});
+    }
+  } catch (error:any) {
+    res.status(500).json({ message: error.message });
+  }
+}
+
+// Get User Followers
+export const getUserFollowers =async (req:Request, res: Response) => {
+  try {
+    const user = await User.findOne({username: req.params.username})
+    if (user) {
+      const followings = await User.find({following: {$in: [user?._id]}})
+      .select("username displayName avatar cover bio isVerified");
+      res.status(200).json(followings);
+    }else{
+      res.status(404).json({message: "User not found"});
+    }
+  } catch (error:any) {
+    res.status(500).json({ message: error.message });
+  }
+}
 
 // Check username is Available
 export const usernameIsAvailable = async (req: Request, res: Response) => {

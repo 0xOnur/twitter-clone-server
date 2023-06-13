@@ -16,6 +16,8 @@ import {
   getUserTweets,
   getUserReplies,
   getUserLikes,
+  getUserFollowings,
+  getUserFollowers,
 } from "../controllers/userController";
 import authMiddleware, {
   AuthenticatedRequest,
@@ -52,6 +54,10 @@ userRoutes.get("/username-exist/:username", usernameExist);
 
 userRoutes.get("/get-user/:username", getUser);
 userRoutes.get("/search-user/:username", searchUser);
+
+userRoutes.get("/get-user-followings/:username", getUserFollowings);
+userRoutes.get("/get-user-followers/:username", getUserFollowers);
+
 
 userRoutes.get("/get-user-tweets/:username", getUserTweets);
 userRoutes.get("/get-user-replies/:username", getUserReplies);
