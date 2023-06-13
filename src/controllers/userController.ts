@@ -299,6 +299,21 @@ export const searchUser = async (req: Request, res: Response) => {
   }
 };
 
+// Suggest new users sorting createdAt with params limit
+export const whoToFollow = async (req: Request, res: Response) => {
+  try {
+    await User.find()
+      .select("username displayName avatar cover bio isVerified")
+      .sort({ createdAt: -1 })
+      .limit(parseInt(req.params.limit))
+      .then((users) => {
+        res.status(200).json(users);
+      });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 // Follow User
 export const followUser = async (req: AuthenticatedRequest, res: Response) => {
   try {
