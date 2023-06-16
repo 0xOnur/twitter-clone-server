@@ -23,14 +23,7 @@ export const getTweetStats =async (req:Request, res:Response) => {
 export const getSpecificTweet = async (req: Request, res: Response) => {
     try {
         const tweet = await Tweet.findById(req.params.tweetId)
-            .populate("author", "username displayName avatar isVerified")
-            .populate({
-                path: "originalTweet",
-                populate: {
-                    path: "author",
-                    select: "username displayName avatar isVerified"
-                }
-            })
+            .populate("author", "username displayName avatar isVerified");
 
         if (!tweet) {
             res.status(404).json({ message: "Tweet not found" });
@@ -39,6 +32,23 @@ export const getSpecificTweet = async (req: Request, res: Response) => {
         const view = tweet.view + 1;
         await Tweet.findByIdAndUpdate(req.params.tweetId, {view}, {new: true});
         res.status(200).json(tweet);
+    } catch (error: any) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+//Get specific Tweet Author
+export const getTweetAuthor = async (req: Request, res: Response) => {
+    try {
+        const author = await Tweet.findById(req.params.tweetId)
+            .populate("author", "username displayName avatar isVerified")
+            .select("author");
+            
+        if (!author) {
+            res.status(404).json({ message: "Tweet not found" });
+            return;
+        }
+        res.status(200).json(author.author);
     } catch (error: any) {
         res.status(500).json({ message: error.message });
     }

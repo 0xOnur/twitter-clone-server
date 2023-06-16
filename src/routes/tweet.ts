@@ -9,6 +9,7 @@ import {
     getTweetStats,
     likeTweet,
     unlikeTweet,
+    getTweetAuthor,
 } from "../controllers/tweetControlleer"
 import authMiddleware from "../middlewares/authMiddleware";
 
@@ -20,6 +21,7 @@ const upload = multer({ storage: storage });
 tweetRoutes.get("/get-tweet/:tweetId", getSpecificTweet);
 
 tweetRoutes.get("/get-tweet-stats/:tweetId", getTweetStats);
+tweetRoutes.get("/get-tweet-author/:tweetId", getTweetAuthor);
 
 tweetRoutes.get("/get-tweet-replies/:tweetId", getTweetReplies);
 tweetRoutes.get("/get-tweet-retweets/:tweetId", getTweetRetweets);
