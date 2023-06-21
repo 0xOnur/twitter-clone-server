@@ -55,7 +55,7 @@ userRoutes.get("/username-exist/:username", usernameExist);
 
 userRoutes.get("/get-user/:username", getUser);
 userRoutes.get("/search-user/:username", searchUser);
-userRoutes.get("/who-to-follow/:limit", whoToFollow);
+userRoutes.get("/who-to-follow", whoToFollow);
 
 userRoutes.get("/get-user-followings/:username", getUserFollowings);
 userRoutes.get("/get-user-followers/:username", getUserFollowers);

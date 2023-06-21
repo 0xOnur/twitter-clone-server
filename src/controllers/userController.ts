@@ -302,13 +302,32 @@ export const searchUser = async (req: Request, res: Response) => {
 // Suggest new users sorting createdAt with params limit
 export const whoToFollow = async (req: Request, res: Response) => {
   try {
-    await User.find()
+    const limit = parseInt(req.query.limit as string) || 10;
+    const offset = parseInt(req.query.offset as string) || 0;
+
+    // Toplam öğe sayısını bulmak için bir count sorgusu yapabilirsiniz.
+    const totalItems = await User.countDocuments();
+
+    // Toplam sayfa sayısını hesaplayın.
+    const totalPages = Math.ceil(totalItems / limit);
+
+    // Geçerli sayfadaki kullanıcıları alın.
+    const users = await User.find()
       .select("username displayName avatar cover bio isVerified")
       .sort({ createdAt: -1 })
-      .limit(parseInt(req.params.limit))
-      .then((users) => {
-        res.status(200).json(users);
-      });
+      .skip(offset * limit)
+      .limit(limit);
+
+    // Yanıtı oluşturun.
+    const response = {
+      page: offset,
+      perPage: limit,
+      total: totalItems,
+      totalPages: totalPages,
+      data: users,
+    };
+
+    res.status(200).json(response);
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }
