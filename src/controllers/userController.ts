@@ -299,36 +299,45 @@ export const searchUser = async (req: Request, res: Response) => {
   }
 };
 
-// Suggest new users sorting createdAt with params limit
+// This controller function suggests new users to follow, 
+// sorted by their creation date, and paginated using limit and page query parameters
 export const whoToFollow = async (req: Request, res: Response) => {
   try {
-    const limit = parseInt(req.query.limit as string) || 10;
-    const offset = parseInt(req.query.offset as string) || 0;
+    // Get the page number and limit from the request, or set default values
+    const page = parseInt(req.query.page as string) || 1;
+    const perPage = parseInt(req.query.limit as string) || 10;
 
-    // Toplam öğe sayısını bulmak için bir count sorgusu yapabilirsiniz.
+    // Calculate the number of documents to skip based on the page number
+    let skip = (page - 1) * perPage;
+    let limit = perPage;
+
+    // Find the total number of user documents in the database
     const totalItems = await User.countDocuments();
 
-    // Toplam sayfa sayısını hesaplayın.
+    // Calculate the total number of pages
     const totalPages = Math.ceil(totalItems / limit);
 
-    // Geçerli sayfadaki kullanıcıları alın.
+    // Find the users for the current page, 
+    // selecting specific fields and sorting by creation date
     const users = await User.find()
       .select("username displayName avatar cover bio isVerified")
       .sort({ createdAt: -1 })
-      .skip(offset * limit)
+      .skip(skip)
       .limit(limit);
 
-    // Yanıtı oluşturun.
+    // Construct the response object
     const response = {
-      page: offset,
+      page: page,
       perPage: limit,
-      total: totalItems,
+      totalItems: totalItems,
       totalPages: totalPages,
       data: users,
     };
 
+    // Send the response
     res.status(200).json(response);
   } catch (error: any) {
+    // Catch and handle any errors
     res.status(500).json({ message: error.message });
   }
 };

@@ -10,6 +10,7 @@ import {
     likeTweet,
     unlikeTweet,
     getTweetAuthor,
+    getPopularTweets,
 } from "../controllers/tweetControlleer"
 import authMiddleware from "../middlewares/authMiddleware";
 
@@ -19,6 +20,7 @@ const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
 tweetRoutes.get("/get-tweet/:tweetId", getSpecificTweet);
+tweetRoutes.get("/get-popular-tweets", getPopularTweets);
 
 tweetRoutes.get("/get-tweet-stats/:tweetId", getTweetStats);
 tweetRoutes.get("/get-tweet-author/:tweetId", getTweetAuthor);
