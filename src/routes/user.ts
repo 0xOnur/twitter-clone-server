@@ -19,6 +19,7 @@ import {
   getUserFollowings,
   getUserFollowers,
   whoToFollow,
+  getUserFollowingTweets,
 } from "../controllers/userController";
 import authMiddleware, {
   AuthenticatedRequest,
@@ -59,6 +60,8 @@ userRoutes.get("/who-to-follow", whoToFollow);
 
 userRoutes.get("/get-user-followings/:username", getUserFollowings);
 userRoutes.get("/get-user-followers/:username", getUserFollowers);
+
+userRoutes.get("/get-user-following-tweets", authMiddleware, getUserFollowingTweets);
 
 
 userRoutes.get("/get-user-tweets/:username", getUserTweets);
