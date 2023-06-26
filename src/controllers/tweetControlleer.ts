@@ -266,5 +266,60 @@ export const unlikeTweet = async (req: AuthenticatedRequest, res: Response) => {
       { new: true }
     );
     res.status(200).json({ message: "Tweet unliked" });
-  } catch (error) {}
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
 };
+
+// Retweet Tweet
+export const retweetTweet =async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = req.user?._id;
+    const tweetId = req.params.tweetId;
+    const tweet = await Tweet.findById(req.params.tweetId);
+    if (!tweet) {
+      res.status(404).json({ message: "Tweet not found" });
+      return;
+    }
+    // Check if the user has already retweeted this tweet.
+    const isRetweeted = await Tweet.find({author: userId, tweetType: "retweet", originalTweet: tweetId})
+    if (isRetweeted.length > 0) {
+      res.status(400).json({ message: "You already retweeted this tweet" });
+      return;
+    }
+    const retweet = new Tweet({
+      author:userId,
+      originalTweet: tweetId,
+      tweetType: "retweet",
+      whoCanReply: "everyone",
+      audience: "everyone",
+    })
+    await retweet.save();
+    res.status(200).json({ message: "Tweet retweeted" });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+}
+
+// Undo Retweet
+export const undoRetweet = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = req.user?._id;
+    const tweetId = req.params.tweetId;
+    const tweet = await Tweet.findById(req.params.tweetId);
+    if (!tweet) {
+      res.status(404).json({ message: "Tweet not found" });
+      return;
+    }
+    // Check if the user has already retweeted this tweet.
+    const isRetweeted = await Tweet.find({author: userId, tweetType: "retweet", originalTweet: tweetId})
+    if (isRetweeted.length === 0) {
+      res.status(400).json({ message: "You didn't retweet this tweet" });
+      return;
+    }
+    await Tweet.deleteOne({author: userId, tweetType: "retweet", originalTweet: tweetId})
+    res.status(200).json({ message: "Tweet unretweeted" });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+}

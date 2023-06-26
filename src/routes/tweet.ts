@@ -11,6 +11,8 @@ import {
     unlikeTweet,
     getTweetAuthor,
     getPopularTweets,
+    retweetTweet,
+    undoRetweet,
 } from "../controllers/tweetControlleer"
 import authMiddleware from "../middlewares/authMiddleware";
 
@@ -31,6 +33,9 @@ tweetRoutes.get("/get-tweet-quotes/:tweetId", getTweetQuotes);
 
 tweetRoutes.put("/like-tweet/:tweetId", authMiddleware, likeTweet);
 tweetRoutes.put("/unlike-tweet/:tweetId", authMiddleware, unlikeTweet);
+
+tweetRoutes.put("/retweet-tweet/:tweetId", authMiddleware, retweetTweet);
+tweetRoutes.put("/undo-retweet/:tweetId", authMiddleware, undoRetweet);
 
 
 export default tweetRoutes;
