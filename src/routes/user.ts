@@ -20,6 +20,7 @@ import {
   getUserFollowers,
   whoToFollow,
   getUserFollowingTweets,
+  getUserBookmarks,
 } from "../controllers/userController";
 import authMiddleware, {
   AuthenticatedRequest,
@@ -68,6 +69,8 @@ userRoutes.get("/get-user-tweets/:username", getUserTweets);
 userRoutes.get("/get-user-replies/:username", getUserReplies);
 userRoutes.get("/get-user-likes/:username", getUserLikes);
 userRoutes.get("/get-user-media-only-tweets/:username", getMediaOnlyTweets);
+
+userRoutes.get("/get-user-bookmarks", authMiddleware, getUserBookmarks);
 
 userRoutes.get("/me", authMiddleware, (req: AuthenticatedRequest, res) => {
   res.status(200).json(req.user);

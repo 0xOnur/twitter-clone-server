@@ -524,3 +524,51 @@ export const getUserLikes = async (req: Request, res: Response) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+// Get User Bookmarked Tweets
+export const getUserBookmarks = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = req.user?._id;
+    const user = await User.findById(userId);
+
+    // Get the page and limit parameters from the request, or set default values
+    const page = parseInt(req.query.page as string) || 1;
+    const perPage = parseInt(req.query.limit as string) || 10;
+
+    // Calculate the number of documents to skip
+    let skip = (page - 1) * perPage;
+    let limit = perPage;
+    
+    if (!user) {
+      res.status(404).json({ message: "User not found" });
+      return;
+    }
+
+    const tweets = await Tweet.find(
+      { bookmarks: { $in: [userId] } })
+      .populate("author", "username displayName avatar isVerified")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    // Find the total number of user documents in the database
+    const totalItems = await Tweet.countDocuments({ bookmarks: { $in: [userId] } });
+
+    // Calculate the total number of pages
+    const totalPages = Math.ceil(totalItems / limit);
+
+    // Construct the response object
+    const response = {
+      page: page,
+      perPage: limit,
+      totalItems: totalItems,
+      totalPages: totalPages,
+      data: tweets,
+    };
+
+    // Send the response
+    res.status(200).json(response);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+}

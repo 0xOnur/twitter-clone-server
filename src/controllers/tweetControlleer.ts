@@ -276,7 +276,7 @@ export const retweetTweet =async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user?._id;
     const tweetId = req.params.tweetId;
-    const tweet = await Tweet.findById(req.params.tweetId);
+    const tweet = await Tweet.findById(tweetId);
     if (!tweet) {
       res.status(404).json({ message: "Tweet not found" });
       return;
@@ -299,14 +299,14 @@ export const retweetTweet =async (req: AuthenticatedRequest, res: Response) => {
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }
-}
+};
 
 // Undo Retweet
 export const undoRetweet = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user?._id;
     const tweetId = req.params.tweetId;
-    const tweet = await Tweet.findById(req.params.tweetId);
+    const tweet = await Tweet.findById(tweetId);
     if (!tweet) {
       res.status(404).json({ message: "Tweet not found" });
       return;
@@ -322,4 +322,59 @@ export const undoRetweet = async (req: AuthenticatedRequest, res: Response) => {
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }
-}
+};
+
+// Add Bookmark
+export const addBookmark = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = req.user?._id;
+    const tweetId = req.params.tweetId;
+
+    const tweet = await Tweet.findById(tweetId);
+    if (!tweet) {
+      res.status(404).json({ message: "Tweet not found" });
+      return;
+    }
+    // Check if the user has already added bookmark field this tweet.
+    const isBookmarked = tweet.bookmarks?.includes(new Types.ObjectId(userId));
+    if (isBookmarked) {
+      res.status(400).json({ message: "You already bookmarked this tweet" });
+      return;
+    }
+    await Tweet.findByIdAndUpdate(tweetId,
+      { $push: { bookmarks: userId } },
+      { new: true }
+    );
+
+    res.status(200).json({ message: "Tweet added to your Bookmarks" });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Remove Bookmark
+export const removeBookmark = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = req.user?._id;
+    const tweetId = req.params.tweetId;
+
+    const tweet = await Tweet.findById(tweetId);
+    if (!tweet) {
+      res.status(404).json({ message: "Tweet not found" });
+      return;
+    }
+    // Check if the user has already added bookmark field this tweet.
+    const isBookmarked = tweet.bookmarks?.includes(new Types.ObjectId(userId));
+    if (!isBookmarked) {
+      res.status(400).json({ message: "You didn't bookmark this tweet" });
+      return;
+    }
+    await Tweet.findByIdAndUpdate(tweetId,
+      { $pull: { bookmarks: userId } },
+      { new: true }
+    );
+    res.status(200).json({ message: "Tweet removed from your Bookmarks" })
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+};

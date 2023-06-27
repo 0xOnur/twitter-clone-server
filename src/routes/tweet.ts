@@ -13,6 +13,8 @@ import {
     getPopularTweets,
     retweetTweet,
     undoRetweet,
+    addBookmark,
+    removeBookmark,
 } from "../controllers/tweetControlleer"
 import authMiddleware from "../middlewares/authMiddleware";
 
@@ -36,6 +38,9 @@ tweetRoutes.put("/unlike-tweet/:tweetId", authMiddleware, unlikeTweet);
 
 tweetRoutes.put("/retweet-tweet/:tweetId", authMiddleware, retweetTweet);
 tweetRoutes.put("/undo-retweet/:tweetId", authMiddleware, undoRetweet);
+
+tweetRoutes.put("/add-bookmark/:tweetId", authMiddleware, addBookmark);
+tweetRoutes.put("/remove-bookmark/:tweetId", authMiddleware, removeBookmark);
 
 
 export default tweetRoutes;
