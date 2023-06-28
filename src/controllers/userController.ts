@@ -209,14 +209,46 @@ export const getUser = async (req: Request, res: Response) => {
 // Get User Followings
 export const getUserFollowings = async (req: Request, res: Response) => {
   try {
-    const user = await User.findOne({username: req.params.username})
-    if (user) {
-      const followings = await User.find({_id: {$in: user.following}})
-      .select("username displayName avatar cover bio isVerified");
-      res.status(200).json(followings);
-    }else{
-      res.status(404).json({message: "User not found"});
+    const username = req.params.username;
+    const user =  await User.findOne({ username: username })
+
+    // Get the page and limit parameters from the request, or set default values
+    const page = parseInt(req.query.page as string) || 1;
+    const perPage = parseInt(req.query.limit as string) || 10;
+
+    // Calculate the number of documents to skip
+    let skip = (page - 1) * perPage;
+    let limit = perPage;
+
+    if (!user) {
+      res.status(404).json({ message: "User not found" });
+      return;
     }
+
+    const followings = await User.find({ _id: { $in: user.following } })
+      .sort({ createdAt: -1 })
+      .select("username displayName avatar cover bio isVerified")
+      .skip(skip)
+      .limit(limit);
+
+    // Find the total number of user documents in the database
+    const totalItems = await User.countDocuments({ _id: { $in: user.following } });
+
+    // Calculate the total number of pages
+    const totalPages = Math.ceil(totalItems / limit);
+
+    // Construct the response object
+    const response = {
+      page: page,
+      perPage: limit,
+      totalItems: totalItems,
+      totalPages: totalPages,
+      data: followings,
+    };
+
+    // Send the response
+    res.status(200).json(response);
+
   } catch (error:any) {
     res.status(500).json({ message: error.message });
   }
@@ -225,14 +257,45 @@ export const getUserFollowings = async (req: Request, res: Response) => {
 // Get User Followers
 export const getUserFollowers =async (req:Request, res: Response) => {
   try {
-    const user = await User.findOne({username: req.params.username})
-    if (user) {
-      const followings = await User.find({following: {$in: [user?._id]}})
-      .select("username displayName avatar cover bio isVerified");
-      res.status(200).json(followings);
-    }else{
-      res.status(404).json({message: "User not found"});
+    const username = req.params.username;
+    const user =  await User.findOne({ username: username })
+
+    // Get the page and limit parameters from the request, or set default values
+    const page = parseInt(req.query.page as string) || 1;
+    const perPage = parseInt(req.query.limit as string) || 10;
+
+    // Calculate the number of documents to skip
+    let skip = (page - 1) * perPage;
+    let limit = perPage;
+
+    if (!user) {
+      res.status(404).json({ message: "User not found" });
+      return;
     }
+
+    const followers = await User.find({following: {$in: [user?._id]}})
+    .sort({ createdAt: -1 })
+    .select("username displayName avatar cover bio isVerified")
+    .skip(skip)
+    .limit(limit);
+
+    // Find the total number of user documents in the database
+    const totalItems = await User.countDocuments({following: {$in: [user?._id]}});
+
+    const totalPages = Math.ceil(totalItems / limit);
+
+    // Construct the response object
+    const response = {
+      page: page,
+      perPage: limit,
+      totalItems: totalItems,
+      totalPages: totalPages,
+      data: followers,
+    };
+
+    // Send the response
+    res.status(200).json(response);
+    
   } catch (error:any) {
     res.status(500).json({ message: error.message });
   }
@@ -390,22 +453,54 @@ export const UnFollowUser = async (
 // Get user Tweets
 export const getUserTweets = async (req: Request, res: Response) => {
   try {
-    const userId = await User.findOne({ username: req.params.username }).select(
+    const username = req.params.username;
+    const userId =  await User.findOne({ username: username }).select(
       "_id"
     );
+
+    // Get the page and limit parameters from the request, or set default values
+    const page = parseInt(req.query.page as string) || 1;
+    const perPage = parseInt(req.query.limit as string) || 10;
+
+    // Calculate the number of documents to skip
+    let skip = (page - 1) * perPage;
+    let limit = perPage;
+
     if (!userId) {
       res.status(404).json({ message: "User not found" });
       return;
     }
-    await Tweet.find({
-      author: userId,
+
+    const tweets = await Tweet.find({
+      author: userId._id,
       tweetType: { $in: ["tweet", "quote", "retweet"] },
     })
       .sort({ createdAt: -1 })
       .select("_id")
-      .then((tweets) => {
-        res.status(200).json(tweets);
-      });
+      .skip(skip)
+      .limit(limit);
+
+      // Find the total number of user documents in the database
+    const totalItems = await Tweet.countDocuments({
+      author: userId._id,
+      tweetType: { $in: ["tweet", "quote", "retweet"] },
+    });
+
+    // Calculate the total number of pages
+    const totalPages = Math.ceil(totalItems / limit);
+
+    // Construct the response object
+    const response = {
+      page: page,
+      perPage: limit,
+      totalItems: totalItems,
+      totalPages: totalPages,
+      data: tweets,
+    };
+
+    // Send the response
+    res.status(200).json(response);
+
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }
@@ -434,8 +529,8 @@ export const getUserFollowingTweets = async (req: AuthenticatedRequest, res: Res
     
     const tweets = await Tweet.find(
       { author: { $in: following } })
-      .populate("author", "username displayName avatar isVerified")
       .sort({ createdAt: -1 })
+      .select("_id")
       .skip(skip)
       .limit(limit);
 
@@ -465,19 +560,48 @@ export const getUserFollowingTweets = async (req: AuthenticatedRequest, res: Res
 // Get Media only User Tweets
 export const getMediaOnlyTweets = async (req: Request, res: Response) => {
   try {
-    const userId = await User.findOne({ username: req.params.username }).select(
+    const username = req.params.username;
+    const userId =  await User.findOne({ username: username }).select(
       "_id"
     );
+
+    // Get the page and limit parameters from the request, or set default values
+    const page = parseInt(req.query.page as string) || 1;
+    const perPage = parseInt(req.query.limit as string) || 10;
+
+    // Calculate the number of documents to skip
+    let skip = (page - 1) * perPage;
+    let limit = perPage;
+
     if (!userId) {
       res.status(404).json({ message: "User not found" });
       return;
     }
-    await Tweet.find({ author: userId, media: { $exists: true, $ne: [] } })
+
+    const tweets = await Tweet.find({ author: userId, media: { $exists: true, $ne: [] } })
       .sort({ createdAt: -1 })
       .select("_id")
-      .then((tweets) => {
-        res.status(200).json(tweets);
-      });
+      .skip(skip)
+      .limit(limit);
+
+      // Find the total number of user documents in the database
+    const totalItems = await Tweet.countDocuments({ author: userId, media: { $exists: true, $ne: [] } });
+
+    // Calculate the total number of pages
+    const totalPages = Math.ceil(totalItems / limit);
+
+    // Construct the response object
+    const response = {
+      page: page,
+      perPage: limit,
+      totalItems: totalItems,
+      totalPages: totalPages,
+      data: tweets,
+    };
+
+    // Send the response
+    res.status(200).json(response);
+    
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }
@@ -486,19 +610,48 @@ export const getMediaOnlyTweets = async (req: Request, res: Response) => {
 // Get User Replies
 export const getUserReplies = async (req: Request, res: Response) => {
   try {
-    const userId = await User.findOne({ username: req.params.username }).select(
+    const username = req.params.username;
+    const userId =  await User.findOne({ username: username }).select(
       "_id"
     );
+
+    // Get the page and limit parameters from the request, or set default values
+    const page = parseInt(req.query.page as string) || 1;
+    const perPage = parseInt(req.query.limit as string) || 10;
+
+    // Calculate the number of documents to skip
+    let skip = (page - 1) * perPage;
+    let limit = perPage;
+
     if (!userId) {
       res.status(404).json({ message: "User not found" });
       return;
     }
-    await Tweet.find({ author: userId, tweetType: "reply" })
+
+    const tweets = await Tweet.find({ author: userId, tweetType: "reply" })
       .sort({ createdAt: -1 })
       .select("_id")
-      .then((tweets) => {
-        res.status(200).json(tweets);
-      });
+      .skip(skip)
+      .limit(limit);
+
+      // Find the total number of user documents in the database
+    const totalItems = await Tweet.countDocuments({ author: userId, tweetType: "reply" });
+
+    // Calculate the total number of pages
+    const totalPages = Math.ceil(totalItems / limit);
+
+    // Construct the response object
+    const response = {
+      page: page,
+      perPage: limit,
+      totalItems: totalItems,
+      totalPages: totalPages,
+      data: tweets,
+    };
+
+    // Send the response
+    res.status(200).json(response);
+
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }
@@ -507,19 +660,48 @@ export const getUserReplies = async (req: Request, res: Response) => {
 // Get User Liked Tweets
 export const getUserLikes = async (req: Request, res: Response) => {
   try {
-    const userId = await User.findOne({ username: req.params.username }).select(
+    const username = req.params.username;
+    const userId =  await User.findOne({ username: username }).select(
       "_id"
     );
+
+    // Get the page and limit parameters from the request, or set default values
+    const page = parseInt(req.query.page as string) || 1;
+    const perPage = parseInt(req.query.limit as string) || 10;
+
+    // Calculate the number of documents to skip
+    let skip = (page - 1) * perPage;
+    let limit = perPage;
+
     if (!userId) {
       res.status(404).json({ message: "User not found" });
       return;
     }
-    await Tweet.find({ likes: { $in: [userId] } })
+
+    const tweets = await Tweet.find({ likes: { $in: [userId] } })
       .sort({ createdAt: -1 })
       .select("_id")
-      .then((tweets) => {
-        res.status(200).json(tweets);
-      });
+      .skip(skip)
+      .limit(limit);
+
+    // Find the total number of user documents in the database
+    const totalItems = await Tweet.countDocuments({ likes: { $in: [userId] } });
+
+    // Calculate the total number of pages
+    const totalPages = Math.ceil(totalItems / limit);
+
+    // Construct the response object
+    const response = {
+      page: page,
+      perPage: limit,
+      totalItems: totalItems,
+      totalPages: totalPages,
+      data: tweets,
+    };
+
+    // Send the response
+    res.status(200).json(response);
+     
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }
@@ -546,8 +728,8 @@ export const getUserBookmarks = async (req: AuthenticatedRequest, res: Response)
 
     const tweets = await Tweet.find(
       { bookmarks: { $in: [userId] } })
-      .populate("author", "username displayName avatar isVerified")
       .sort({ createdAt: -1 })
+      .select("_id")
       .skip(skip)
       .limit(limit);
 
