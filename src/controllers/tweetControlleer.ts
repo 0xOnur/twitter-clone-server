@@ -7,19 +7,28 @@ import Tweet from "../schemas/tweet.schema";
 export const getTweetStats = async (req: Request, res: Response) => {
   try {
     const tweetId = req.params.tweetId;
+    
     const replyStats = await Tweet.find({
       originalTweet: tweetId,
       tweetType: "reply",
     }).select("author");
+    
     const retweetStats = await Tweet.find({
       originalTweet: tweetId,
       tweetType: "retweet",
     }).select("author");
+
+    const likeStats = await Tweet.find({
+      originalTweet: tweetId,
+      tweetType: "like",
+    }).select("author");
+
     const quoteStats = await Tweet.find({
       originalTweet: tweetId,
       tweetType: "quote",
     }).select("author");
-    res.status(200).json({ replyStats, retweetStats, quoteStats });
+    
+    res.status(200).json({ replyStats, retweetStats, likeStats, quoteStats });
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }
@@ -103,7 +112,6 @@ export const getPopularTweets = async (req: Request, res: Response) => {
         $addFields: {
           totalInteractions: {
             $add: [
-              { $size: "$likes" },
               "$view",
               { $ifNull: ["$interactions.count", 0] },
             ],
@@ -183,29 +191,46 @@ export const getTweetAuthor = async (req: Request, res: Response) => {
 // Get Tweet replies
 export const getTweetReplies = async (req: Request, res: Response) => {
   try {
-    await Tweet.find({ originalTweet: req.params.tweetId, tweetType: "reply" })
-      .populate("author", "username displayName avatar isVerified")
-      .sort({ createdAt: -1 })
-      .then((replies) => {
-        res.status(200).json(replies);
-      });
-  } catch (error: any) {
-    res.status(500).json({ message: error.message });
-  }
-};
+    const tweetId = req.params.tweetId;
 
-// Get Tweet retweets
-export const getTweetRetweets = async (req: Request, res: Response) => {
-  try {
-    await Tweet.find({
-      originalTweet: req.params.tweetId,
-      tweetType: "retweet",
-    })
-      .populate("author", "username displayName avatar isVerified")
-      .sort({ createdAt: -1 })
-      .then((retweets) => {
-        res.status(200).json(retweets);
-      });
+    // Get the page and limit parameters from the request, or set default values
+    const page = parseInt(req.query.page as string) || 1;
+    const perPage = parseInt(req.query.limit as string) || 10;
+
+     // Calculate the number of documents to skip
+     let skip = (page - 1) * perPage;
+     let limit = perPage;
+ 
+     const tweet = await Tweet.findById(tweetId);
+
+     if (!tweet) {
+      res.status(404).json({ message: "Tweet not found" });
+      return;
+    }
+     
+     const replies = await Tweet.find({ originalTweet: tweetId, tweetType: "reply" })
+     .select("_id")
+     .sort({ createdAt: -1 })
+     .skip(skip)
+     .limit(limit)
+     .lean();
+
+      // Find the total number of user documents in the database
+      const totalItems = await Tweet.countDocuments({originalTweet: tweetId, tweetType: "reply"});
+      const totalPages = Math.ceil(totalItems / limit);
+
+      // Construct the response
+      const response = {
+        page: page,
+        perPage: limit,
+        totalItems: totalItems,
+        totalPages: totalPages,
+        data: replies,
+      };
+
+      // Send the response
+      res.status(200).json(response);
+
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }
@@ -214,12 +239,45 @@ export const getTweetRetweets = async (req: Request, res: Response) => {
 // Get Tweet Quotes
 export const getTweetQuotes = async (req: Request, res: Response) => {
   try {
-    await Tweet.find({ originalTweet: req.params.tweetId, tweetType: "quote" })
-      .populate("author", "username displayName avatar isVerified")
+    const tweetId = req.params.tweetId;
+
+    // Get the page and limit parameters from the request, or set default values
+    const page = parseInt(req.query.page as string) || 1;
+    const perPage = parseInt(req.query.limit as string) || 10;
+
+    // Calculate the number of documents to skip
+    let skip = (page - 1) * perPage;
+    let limit = perPage;
+
+    const tweet = await Tweet.findById(tweetId);
+
+    if (!tweet) {
+      res.status(404).json({ message: "Tweet not found" });
+      return;
+    }
+
+    const quotes = await Tweet.find({ originalTweet: tweetId, tweetType: "quote" })
+      .select("_id")
       .sort({ createdAt: -1 })
-      .then((quotes) => {
-        res.status(200).json(quotes);
-      });
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    // Find the total number of user documents in the database
+    const totalItems = await Tweet.countDocuments({ originalTweet: tweetId, tweetType: "quote" })
+    const totalPages = Math.ceil(totalItems / limit);
+
+    // Construct the response
+    const response = {
+      page: page,
+      perPage: limit,
+      totalItems: totalItems,
+      totalPages: totalPages,
+      data: quotes,
+    };
+
+    // Send the response
+    res.status(200).json(response);
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }
@@ -228,20 +286,30 @@ export const getTweetQuotes = async (req: Request, res: Response) => {
 // Like Tweet
 export const likeTweet = async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const tweet = await Tweet.findById(req.params.tweetId);
+    const userId = req.user?._id;
+    const tweetId = req.params.tweetId;
+    const tweet = await Tweet.findById(tweetId);
     if (!tweet) {
       res.status(404).json({ message: "Tweet not found" });
       return;
     }
-    if (tweet.likes?.includes(new Types.ObjectId(req.user?._id))) {
+
+    const isLiked = await Tweet.find({author: userId, tweetType: "like", originalTweet: tweetId});
+    if (isLiked.length > 0) {
       res.status(400).json({ message: "You already liked this tweet" });
       return;
     }
-    await Tweet.findByIdAndUpdate(
-      req.params.tweetId,
-      { $push: { likes: req.user?._id } },
-      { new: true }
-    );
+
+    const like = new Tweet({
+      author: userId,
+      originalTweet: tweetId,
+      tweetType: "like",
+      whoCanReply: "everyone",
+      audience: "everyone",
+    });
+
+    await like.save();
+
     res.status(200).json({ message: "Tweet liked" });
   } catch (error: any) {
     res.status(500).json({ message: error.message });
@@ -251,20 +319,21 @@ export const likeTweet = async (req: AuthenticatedRequest, res: Response) => {
 // Unlike Tweet
 export const unlikeTweet = async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const tweet = await Tweet.findById(req.params.tweetId);
+    const userId = req.user?._id;
+    const tweetId = req.params.tweetId;
+    const tweet = await Tweet.findById(tweetId);
     if (!tweet) {
       res.status(404).json({ message: "Tweet not found" });
       return;
     }
-    if (!tweet.likes?.includes(new Types.ObjectId(req.user?._id))) {
+    const isLiked = await Tweet.find({author: userId, tweetType: "like", originalTweet: tweetId});
+
+    if (isLiked.length === 0) {
       res.status(400).json({ message: "You didn't like this tweet" });
       return;
     }
-    await Tweet.findByIdAndUpdate(
-      req.params.tweetId,
-      { $pull: { likes: req.user?._id } },
-      { new: true }
-    );
+
+    await Tweet.deleteOne({author: userId, tweetType: "like", originalTweet: tweetId})
     res.status(200).json({ message: "Tweet unliked" });
   } catch (error: any) {
     res.status(500).json({ message: error.message });
@@ -375,6 +444,110 @@ export const removeBookmark = async (req: AuthenticatedRequest, res: Response) =
     );
     res.status(200).json({ message: "Tweet removed from your Bookmarks" })
   } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Get users who retweeted the tweet
+export const getRetweeters = async (req: Request, res: Response) => {
+  try {
+    const tweetId = req.params.tweetId;
+
+    // Get the page and limit parameters from the request, or set default values
+    const page = parseInt(req.query.page as string) || 1;
+    const perPage = parseInt(req.query.limit as string) || 10;
+
+    // Calculate the number of documents to skip
+    let skip = (page - 1) * perPage;
+    let limit = perPage;
+
+    const tweet = await Tweet.findById(tweetId);
+
+    if (!tweet) {
+      res.status(404).json({ message: "Tweet not found" });
+      return;
+    }
+
+    const retweeters = await Tweet.find({
+      originalTweet: tweetId,
+      tweetType: "retweet",
+    })
+      .sort({ createdAt: -1 })
+      .populate("author", "username displayName avatar cover isVerified")
+      .select("author")
+      .skip(skip)
+      .limit(limit);
+    
+    const users = retweeters.map(tweet => tweet.author);
+    
+    // Find the total number of user documents in the database
+    const totalItems = await Tweet.countDocuments({ originalTweet: tweetId, tweetType: "retweet" });
+    const totalPages = Math.ceil(totalItems / limit);
+
+    // Construct the response
+    const response = {
+      page: page,
+      perPage: limit,
+      totalItems: totalItems,
+      totalPages: totalPages,
+      data: users,
+    };
+
+    // Send the response
+    res.status(200).json(response);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Get users who liked the tweet
+export const getLikers = async (req: Request, res: Response) => {
+  try {
+    const tweetId = req.params.tweetId;
+
+    // Get the page and limit parameters from the request, or set default values
+    const page = parseInt(req.query.page as string) || 1;
+    const perPage = parseInt(req.query.limit as string) || 10;
+
+    // Calculate the number of documents to skip
+    let skip = (page - 1) * perPage;
+    let limit = perPage;
+
+    const tweet = await Tweet.findById(tweetId);
+
+    if (!tweet) {
+      res.status(404).json({ message: "Tweet not found" });
+      return;
+    }
+
+    const likers = await Tweet.find({
+      originalTweet: tweetId,
+      tweetType: "like",
+    })
+      .sort({ createdAt: -1 })
+      .populate("author", "username displayName avatar cover isVerified")
+      .select("author")
+      .skip(skip)
+      .limit(limit);
+
+      const users = likers.map(tweet => tweet.author);
+
+    // Find the total number of user documents in the database
+    const totalItems = await Tweet.countDocuments({ originalTweet: tweetId, tweetType: "like" });
+    const totalPages = Math.ceil(totalItems / limit);
+
+    // Construct the response
+    const response = {
+      page: page,
+      perPage: limit,
+      totalItems: totalItems,
+      totalPages: totalPages,
+      data: users,
+    };
+
+    // Send the response
+    res.status(200).json(response);
+  }catch (error: any) {
     res.status(500).json({ message: error.message });
   }
 };

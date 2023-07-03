@@ -13,10 +13,9 @@ export interface ITweet extends Document {
   whoCanReply: "everyone" | "following" | "mentioned";
   content?: string;
   media?: IMedia[];
-  likes?: mongoose.Types.ObjectId[];
   bookmarks? : mongoose.Types.ObjectId[];
   originalTweet?: mongoose.Types.ObjectId[];
-  tweetType: "tweet" | "reply" | "retweet" | "quote";
+  tweetType: "tweet" | "reply" | "retweet" | "like" | "quote";
   view: number;
   createdAt: Date;
   updatedAt: Date;
@@ -66,12 +65,6 @@ const TweetSchema: Schema = new Schema(
         },
       },
     ],
-    likes: [
-      {
-        type: Schema.Types.ObjectId,
-        ref: "User",
-      },
-    ],
     bookmarks: [
       {
         type: Schema.Types.ObjectId,
@@ -85,7 +78,7 @@ const TweetSchema: Schema = new Schema(
     tweetType: {
       type: String,
       required: true,
-      enum: ["tweet", "reply", "retweet", "quote"],
+      enum: ["tweet", "reply", "retweet", "like", "quote"],
     },
     view: {
       type: Number,

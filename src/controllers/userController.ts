@@ -678,14 +678,14 @@ export const getUserLikes = async (req: Request, res: Response) => {
       return;
     }
 
-    const tweets = await Tweet.find({ likes: { $in: [userId] } })
+    const tweets = await Tweet.find({ author: userId, tweetType: "like" })
       .sort({ createdAt: -1 })
       .select("_id")
       .skip(skip)
       .limit(limit);
 
     // Find the total number of user documents in the database
-    const totalItems = await Tweet.countDocuments({ likes: { $in: [userId] } });
+    const totalItems = await Tweet.countDocuments({ author: userId, tweetType: "like" });
 
     // Calculate the total number of pages
     const totalPages = Math.ceil(totalItems / limit);
