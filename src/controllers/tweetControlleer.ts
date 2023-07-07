@@ -2,6 +2,8 @@ import { Request, Response } from "express";
 import { AuthenticatedRequest } from "./userController";
 import { Types } from "mongoose";
 import Tweet from "../schemas/tweet.schema";
+import { createPoll } from "./pollController";
+import { uploadFile } from "../services/aws";
 
 // Count tweet actions
 export const getTweetStats = async (req: Request, res: Response) => {
@@ -84,6 +86,9 @@ export const getPopularTweets = async (req: Request, res: Response) => {
     // Query to get the tweets, their interactions, and author details
     const tweets = await Tweet.aggregate([
       { $match: { createdAt: { $gte: oneMonthAgo } } }, // Filter by creation date
+      //get the just this types tweets: tweet, reply, quote
+      { $match: { tweetType: { $in: ["tweet", "reply", "quote"] } } },
+
       {
         // Look up interactions for each tweet
         $lookup: {
@@ -551,3 +556,62 @@ export const getLikers = async (req: Request, res: Response) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+// Create Tweet
+export const createTweet =async (req:AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = req.user?._id;
+
+    // check the poll
+    if (req.body.poll) {
+      const pollData = JSON.parse(req.body.poll);
+
+      const poll = await createPoll(userId!, pollData);
+      req.body.poll = poll._id;
+    }
+
+    //check the gif
+    if (req.body.tenorMedia) {
+      const tenorMedia = JSON.parse(req.body.tenorMedia);
+      req.body.media = tenorMedia;
+    }
+
+    const tweetData = {
+      author :userId,
+      audience: req.body.audience || "everyone",
+      whoCanReply: req.body.whoCanReply || "everyone",
+      content: req.body?.content,
+      media: req.body?.media,
+      pollId: req.body?.poll,
+      tweetType: req.body.tweetType,
+      originalTweet: req.body?.originalTweet
+    };
+
+    const tweet = new Tweet(tweetData);
+
+    if(req.files) {
+      await Promise.all(
+        req.files.map(async (file: Express.Multer.File, index: number) => {
+          console.log(file);
+          await uploadFile({
+            file: file,
+            folder: `Tweets/${tweet._id}`
+          }).then((res) => {
+            console.log("🚀 ~ file: tweetControlleer.ts:596 ~ req.files.map ~ res:", res)
+            tweet.media?.push({
+              url: res?.url!,
+              alt: undefined,
+              type: file.mimetype,
+            })
+          });
+        })
+      );
+    }
+    console.log(tweet);
+    console.log(req.body);
+    await tweet.save();
+    res.status(200).json({ message: "Tweet created" });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+}

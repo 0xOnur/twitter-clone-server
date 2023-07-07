@@ -2,17 +2,17 @@ import mongoose, { Schema, Document } from "mongoose";
 
 export interface IMedia {
   url: string;
-  alt: string;
-  type: "image" | "gif" | "video";
+  alt?: string;
+  type: string;
 }
 
 export interface ITweet extends Document {
   author: mongoose.Types.ObjectId[];
-  audience: "everyone" | "specificUsers";
-  specificAudience?: mongoose.Types.ObjectId[];
+  audience: "everyone" | "circle";
   whoCanReply: "everyone" | "following" | "mentioned";
   content?: string;
   media?: IMedia[];
+  pollId?: mongoose.Types.ObjectId[];
   bookmarks? : mongoose.Types.ObjectId[];
   originalTweet?: mongoose.Types.ObjectId[];
   tweetType: "tweet" | "reply" | "retweet" | "like" | "quote";
@@ -31,14 +31,8 @@ const TweetSchema: Schema = new Schema(
     audience: {
       type: String,
       required: true,
-      enum: ["everyone", "specificUsers"],
+      enum: ["everyone", "circle"],
     },
-    specificAudience: [
-      {
-        type: Schema.Types.ObjectId,
-        ref: "User",
-      },
-    ],
     whoCanReply: {
       type: String,
       required: true,
@@ -48,6 +42,10 @@ const TweetSchema: Schema = new Schema(
       type: String,
       maxLength: 280,
     },
+    pollId: {
+      type: Schema.Types.ObjectId,
+      ref: "Poll",
+    },
     media: [
       {
         url: {
@@ -56,12 +54,10 @@ const TweetSchema: Schema = new Schema(
         },
         alt: {
           type: String,
-          required: true,
         },
         type: {
           type: String,
           required: true,
-          enum: ["image", "gif", "video"],
         },
       },
     ],

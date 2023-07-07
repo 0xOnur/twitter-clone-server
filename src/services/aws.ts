@@ -5,6 +5,7 @@ import {
   PutObjectCommand,
   DeleteObjectCommand,
 } from "@aws-sdk/client-s3";
+import fs from "fs";
 
 dotenv.config();
 
@@ -29,19 +30,22 @@ export const uploadFile = async ({ file, folder }: IProps) => {
     const params = {
       Bucket: process.env.SPACES_BUCKET_NAME!,
       Key: `${folder}/${uuidv4()}-${file.originalname}`,
-      Body: file.buffer,
+      Body: file.buffer || fs.createReadStream(file.path),
       ACL: "public-read",
       ContentType: file.mimetype,
     };
 
     const command = new PutObjectCommand(params);
-    const data = await s3.send(command);
-    if(data.$metadata.httpStatusCode === 200) {
-      return {
-        url: `https://${process.env.SPACES_BUCKET_NAME}.${process.env.AWS_REGION}.digitaloceanspaces.com/${params.Key}`,
-        data
-      };
-    }
+    return s3.send(command).then(
+      (data) => {
+        return {
+          url: `https://${process.env.SPACES_BUCKET_NAME}.${process.env.AWS_REGION}.digitaloceanspaces.com/${params.Key}`,
+          data
+        }
+      }
+    ).catch(error => {
+      console.log(error.message);
+    });
   } catch (error: any) {
     console.log(error.message);
   }

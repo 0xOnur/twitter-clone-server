@@ -1,6 +1,6 @@
 import express from "express";
-import multer from "multer";
-
+import multer, { MulterError } from "multer";
+import { useFileFilter } from "../hooks/useFileFilter";
 import {
     getTweetReplies,
     getTweetQuotes,
@@ -16,13 +16,15 @@ import {
     removeBookmark,
     getRetweeters,
     getLikers,
+    createTweet,
 } from "../controllers/tweetControlleer"
 import authMiddleware from "../middlewares/authMiddleware";
+import { uploadMiddleware } from "../middlewares/uploadFileMiddleware";
 
 // http://localhost:5000/tweet/
 const tweetRoutes = express.Router();
-const storage = multer.memoryStorage();
-const upload = multer({ storage: storage });
+
+tweetRoutes.post("/create-tweet/", authMiddleware, uploadMiddleware, createTweet);
 
 tweetRoutes.get("/get-tweet/:tweetId", getSpecificTweet);
 tweetRoutes.get("/get-popular-tweets", getPopularTweets);

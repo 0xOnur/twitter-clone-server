@@ -1,6 +1,5 @@
 import mongoose, { Schema, Document } from "mongoose";
 import bcrypt from "bcrypt";
-import { ITweet } from "./tweet.schema";
 
 export interface IUser extends Document {
   displayName: string;
