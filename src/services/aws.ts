@@ -52,8 +52,9 @@ export const uploadFile = async ({ file, folder }: IProps) => {
 };
 
 // File delete
-export const deleteFile = async (path: string) => {
+export const deleteFile = async (url: string) => {
   try {
+    const path = url.split("/").slice(3).join("/");
     const params = {
       Bucket: process.env.SPACES_BUCKET_NAME!,
       Key: path,

@@ -1,9 +1,9 @@
 import { Request, Response } from "express";
 import { AuthenticatedRequest } from "./userController";
 import { Types } from "mongoose";
-import Tweet from "../schemas/tweet.schema";
+import Tweet, { IMedia } from "../schemas/tweet.schema";
 import { createPoll } from "./pollController";
-import { uploadFile } from "../services/aws";
+import { uploadFile, deleteFile } from "../services/aws";
 
 // Count tweet actions
 export const getTweetStats = async (req: Request, res: Response) => {
@@ -607,7 +607,6 @@ export const createTweet =async (req:AuthenticatedRequest, res: Response) => {
         })
       );
     }
-    console.log(tweet);
     console.log(req.body);
     await tweet.save();
     res.status(200).json({ message: "Tweet created" });
@@ -615,3 +614,36 @@ export const createTweet =async (req:AuthenticatedRequest, res: Response) => {
     res.status(500).json({ message: error.message });
   }
 }
+
+// Delete Tweet
+export const deleteTweet = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = req.user?._id;
+    const tweetId = req.params.tweetId;
+
+    const tweet = await Tweet.findById(tweetId);
+    if (!tweet) {
+      res.status(404).json({ message: "Tweet not found" });
+      return;
+    }
+
+    if (tweet.author.toString() !== userId) {
+      res.status(403).json({ message: "You can't delete this tweet" });
+      return;
+    }
+
+    if(tweet.media){
+      await Promise.all(
+        tweet.media.map(async (file: IMedia) => {
+          const path = file;
+          await deleteFile(path.url);
+        }));
+    }
+
+    await Tweet.findByIdAndDelete(tweetId);
+
+    res.status(200).json({ message: "Your Tweet was deleted" });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+};

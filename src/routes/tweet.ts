@@ -17,6 +17,7 @@ import {
     getRetweeters,
     getLikers,
     createTweet,
+    deleteTweet,
 } from "../controllers/tweetControlleer"
 import authMiddleware from "../middlewares/authMiddleware";
 import { uploadMiddleware } from "../middlewares/uploadFileMiddleware";
@@ -25,6 +26,7 @@ import { uploadMiddleware } from "../middlewares/uploadFileMiddleware";
 const tweetRoutes = express.Router();
 
 tweetRoutes.post("/create-tweet/", authMiddleware, uploadMiddleware, createTweet);
+tweetRoutes.delete("/delete-tweet/:tweetId", authMiddleware, deleteTweet);
 
 tweetRoutes.get("/get-tweet/:tweetId", getSpecificTweet);
 tweetRoutes.get("/get-popular-tweets", getPopularTweets);

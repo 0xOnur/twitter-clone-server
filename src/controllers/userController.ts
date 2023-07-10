@@ -145,16 +145,12 @@ export const updateUser = async (req: AuthenticatedRequest, res: Response) => {
 
     //delete old avatar from aws
     if ((req.body.avatar === "null" || req.files.avatar) && user.avatar) {
-      //get path from url
-      const path = user.avatar.split("/").slice(3).join("/");
-      await deleteFile(path);
+      await deleteFile(user.avatar);
     }
 
     // delete old cover from aws
     if ((req.body.cover === "null" || req.files.cover) && user.cover) {
-      //get path from url
-      const path = user.cover.split("/").slice(3).join("/");
-      await deleteFile(path);
+      await deleteFile(user.cover);
     }
 
     if (req.files) {
