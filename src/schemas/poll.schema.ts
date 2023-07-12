@@ -14,7 +14,7 @@ const PollChoiceSchema = new mongoose.Schema({
 });
 
 const PollSchema = new mongoose.Schema({
-    userId: {
+    author: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
         required: true,

@@ -1,13 +1,9 @@
+import { IAuthenticateRequest } from "../types/IAuthenticateRequest";
+import { Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
-import { Request, Response, NextFunction } from "express";
-
-// Extend the Request type and create a new type
-export interface AuthenticatedRequest extends Request {
-  user?: IDecoded;
-}
 
 const authMiddleware = async (
-  req: AuthenticatedRequest,
+  req: IAuthenticateRequest,
   res: Response,
   next: NextFunction
 ) => {

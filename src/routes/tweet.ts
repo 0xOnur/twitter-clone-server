@@ -1,6 +1,4 @@
 import express from "express";
-import multer, { MulterError } from "multer";
-import { useFileFilter } from "../hooks/useFileFilter";
 import {
     getTweetReplies,
     getTweetQuotes,

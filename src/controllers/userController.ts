@@ -1,3 +1,4 @@
+import { IAuthenticateRequest } from "../types/IAuthenticateRequest";
 import { Request, Response } from "express";
 import { Types } from "mongoose";
 import bcrypt from "bcrypt";
@@ -7,11 +8,6 @@ import Tweet from "../schemas/tweet.schema";
 import { generateToken, updateToken } from "./tokenController";
 import { uploadFile, deleteFile } from "../services/aws";
 
-// Extend the Request type and create a new type
-export interface AuthenticatedRequest extends Request {
-  user?: IDecoded;
-  files?: any;
-}
 
 // Login User
 export const LoginUser = async (req: Request, res: Response) => {
@@ -126,7 +122,7 @@ export const createUser = async (req: Request, res: Response) => {
 };
 
 // Update User
-export const updateUser = async (req: AuthenticatedRequest, res: Response) => {
+export const updateUser = async (req: IAuthenticateRequest, res: Response) => {
   try {
     const user = await User.findById(req.user?._id);
     if (!user) {
@@ -402,7 +398,7 @@ export const whoToFollow = async (req: Request, res: Response) => {
 };
 
 // Follow User
-export const followUser = async (req: AuthenticatedRequest, res: Response) => {
+export const followUser = async (req: IAuthenticateRequest, res: Response) => {
   try {
     const user = await User.findById(req.user?._id);
     if (!user) {
@@ -424,7 +420,7 @@ export const followUser = async (req: AuthenticatedRequest, res: Response) => {
 
 // UnFollowUser User
 export const UnFollowUser = async (
-  req: AuthenticatedRequest,
+  req: IAuthenticateRequest,
   res: Response
 ) => {
   try {
@@ -503,7 +499,7 @@ export const getUserTweets = async (req: Request, res: Response) => {
 };
 
 // Get User Following Tweets
-export const getUserFollowingTweets = async (req: AuthenticatedRequest, res: Response) => {
+export const getUserFollowingTweets = async (req: IAuthenticateRequest, res: Response) => {
   try {
     const userId = req.user?._id;
     const user = await User.findById(userId);
@@ -704,7 +700,7 @@ export const getUserLikes = async (req: Request, res: Response) => {
 };
 
 // Get User Bookmarked Tweets
-export const getUserBookmarks = async (req: AuthenticatedRequest, res: Response) => {
+export const getUserBookmarks = async (req: IAuthenticateRequest, res: Response) => {
   try {
     const userId = req.user?._id;
     const user = await User.findById(userId);

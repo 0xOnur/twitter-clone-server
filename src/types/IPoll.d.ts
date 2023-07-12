@@ -1,16 +1,12 @@
 interface IChoice {
-  id: number;
+  _id: string,
   text: string;
-}
-
-interface IDuration {
-  days: number;
-  hours: number;
-  minutes: number;
+  votes: string[];
+  percentage?: number;
 }
 
 export interface IPoll {
+  author: string;
   choices: IChoice[];
-  duration: IDuration;
-  showPoll: boolean;
+  expiresAt: Date;
 }

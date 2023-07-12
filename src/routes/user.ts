@@ -22,9 +22,7 @@ import {
   getUserFollowingTweets,
   getUserBookmarks,
 } from "../controllers/userController";
-import authMiddleware, {
-  AuthenticatedRequest,
-} from "../middlewares/authMiddleware";
+import authMiddleware from "../middlewares/authMiddleware";
 
 // http://localhost:5000/user/
 const userRoutes = express.Router();
@@ -72,8 +70,5 @@ userRoutes.get("/get-user-media-only-tweets/:username", getMediaOnlyTweets);
 
 userRoutes.get("/get-user-bookmarks", authMiddleware, getUserBookmarks);
 
-userRoutes.get("/me", authMiddleware, (req: AuthenticatedRequest, res) => {
-  res.status(200).json(req.user);
-});
 
 export default userRoutes;

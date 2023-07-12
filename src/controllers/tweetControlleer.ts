@@ -1,9 +1,9 @@
-import { Request, Response } from "express";
-import { AuthenticatedRequest } from "./userController";
-import { Types } from "mongoose";
+import { IAuthenticateRequest } from "../types/IAuthenticateRequest";
+import { uploadFile, deleteFile } from "../services/aws";
 import Tweet, { IMedia } from "../schemas/tweet.schema";
 import { createPoll } from "./pollController";
-import { uploadFile, deleteFile } from "../services/aws";
+import { Request, Response } from "express";
+import { Types } from "mongoose";
 
 // Count tweet actions
 export const getTweetStats = async (req: Request, res: Response) => {
@@ -289,7 +289,7 @@ export const getTweetQuotes = async (req: Request, res: Response) => {
 };
 
 // Like Tweet
-export const likeTweet = async (req: AuthenticatedRequest, res: Response) => {
+export const likeTweet = async (req: IAuthenticateRequest, res: Response) => {
   try {
     const userId = req.user?._id;
     const tweetId = req.params.tweetId;
@@ -322,7 +322,7 @@ export const likeTweet = async (req: AuthenticatedRequest, res: Response) => {
 };
 
 // Unlike Tweet
-export const unlikeTweet = async (req: AuthenticatedRequest, res: Response) => {
+export const unlikeTweet = async (req: IAuthenticateRequest, res: Response) => {
   try {
     const userId = req.user?._id;
     const tweetId = req.params.tweetId;
@@ -346,7 +346,7 @@ export const unlikeTweet = async (req: AuthenticatedRequest, res: Response) => {
 };
 
 // Retweet Tweet
-export const retweetTweet =async (req: AuthenticatedRequest, res: Response) => {
+export const retweetTweet =async (req: IAuthenticateRequest, res: Response) => {
   try {
     const userId = req.user?._id;
     const tweetId = req.params.tweetId;
@@ -376,7 +376,7 @@ export const retweetTweet =async (req: AuthenticatedRequest, res: Response) => {
 };
 
 // Undo Retweet
-export const undoRetweet = async (req: AuthenticatedRequest, res: Response) => {
+export const undoRetweet = async (req: IAuthenticateRequest, res: Response) => {
   try {
     const userId = req.user?._id;
     const tweetId = req.params.tweetId;
@@ -399,7 +399,7 @@ export const undoRetweet = async (req: AuthenticatedRequest, res: Response) => {
 };
 
 // Add Bookmark
-export const addBookmark = async (req: AuthenticatedRequest, res: Response) => {
+export const addBookmark = async (req: IAuthenticateRequest, res: Response) => {
   try {
     const userId = req.user?._id;
     const tweetId = req.params.tweetId;
@@ -427,7 +427,7 @@ export const addBookmark = async (req: AuthenticatedRequest, res: Response) => {
 };
 
 // Remove Bookmark
-export const removeBookmark = async (req: AuthenticatedRequest, res: Response) => {
+export const removeBookmark = async (req: IAuthenticateRequest, res: Response) => {
   try {
     const userId = req.user?._id;
     const tweetId = req.params.tweetId;
@@ -558,7 +558,7 @@ export const getLikers = async (req: Request, res: Response) => {
 };
 
 // Create Tweet
-export const createTweet =async (req:AuthenticatedRequest, res: Response) => {
+export const createTweet =async (req:IAuthenticateRequest, res: Response) => {
   try {
     const userId = req.user?._id;
 
@@ -616,7 +616,7 @@ export const createTweet =async (req:AuthenticatedRequest, res: Response) => {
 }
 
 // Delete Tweet
-export const deleteTweet = async (req: AuthenticatedRequest, res: Response) => {
+export const deleteTweet = async (req: IAuthenticateRequest, res: Response) => {
   try {
     const userId = req.user?._id;
     const tweetId = req.params.tweetId;
