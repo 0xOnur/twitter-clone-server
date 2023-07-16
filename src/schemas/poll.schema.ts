@@ -20,14 +20,10 @@ const PollSchema = new mongoose.Schema({
         required: true,
     },
     choices: [PollChoiceSchema],
-    active: {
-        type: Boolean,
-        default: true,
-    },
     expiresAt: {
         type: Date,
         required: true,
     },
 });
 
-export default mongoose.model('Poll', PollSchema);
+export default mongoose.model<IPoll>('Poll', PollSchema);

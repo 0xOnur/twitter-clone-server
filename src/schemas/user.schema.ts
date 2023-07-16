@@ -1,28 +1,6 @@
 import mongoose, { Schema, Document } from "mongoose";
 import bcrypt from "bcrypt";
 
-export interface IUser extends Document {
-  displayName: string;
-  username: string;
-  email: string;
-  isVerified: boolean;
-  password: string;
-  bio?: string;
-  location?: string;
-  website?: string;
-  avatar?: string;
-  cover?: string;
-  following: mongoose.Types.ObjectId[];
-  followers?: IUser[]
-  birthDay?: {
-    day: number;
-    month: number;
-    year: number;
-  }
-  createdAt: Date;
-  updatedAt: Date;
-}
-
 const UserSchema: Schema = new Schema(
   {
     displayName: {

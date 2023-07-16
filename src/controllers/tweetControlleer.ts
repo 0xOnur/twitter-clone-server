@@ -1,9 +1,10 @@
 import { IAuthenticateRequest } from "../types/IAuthenticateRequest";
 import { uploadFile, deleteFile } from "../services/aws";
-import Tweet, { IMedia } from "../schemas/tweet.schema";
-import { createPoll } from "./pollController";
+import Tweet from "../schemas/tweet.schema";
+import { createPoll, deletePoll } from "./pollController";
 import { Request, Response } from "express";
 import { Types } from "mongoose";
+import { createNotification } from "./notificationController";
 
 // Count tweet actions
 export const getTweetStats = async (req: Request, res: Response) => {
@@ -292,14 +293,13 @@ export const getTweetQuotes = async (req: Request, res: Response) => {
 export const likeTweet = async (req: IAuthenticateRequest, res: Response) => {
   try {
     const userId = req.user?._id;
-    const tweetId = req.params.tweetId;
-    const tweet = await Tweet.findById(tweetId);
+    const tweet = await Tweet.findById(req.params.tweetId);
     if (!tweet) {
       res.status(404).json({ message: "Tweet not found" });
       return;
     }
 
-    const isLiked = await Tweet.find({author: userId, tweetType: "like", originalTweet: tweetId});
+    const isLiked = await Tweet.find({author: userId, tweetType: "like", originalTweet: tweet._id});
     if (isLiked.length > 0) {
       res.status(400).json({ message: "You already liked this tweet" });
       return;
@@ -307,13 +307,24 @@ export const likeTweet = async (req: IAuthenticateRequest, res: Response) => {
 
     const like = new Tweet({
       author: userId,
-      originalTweet: tweetId,
+      originalTweet: tweet._id,
       tweetType: "like",
       whoCanReply: "everyone",
       audience: "everyone",
     });
 
     await like.save();
+
+    if(userId !== tweet.author.toString()) {
+      // create notification
+      await createNotification({
+        type: "like",
+        sender: new Types.ObjectId(userId),
+        receiver: tweet.author,
+        tweetId: Object(tweet._id),
+        read: false,
+      })
+    }
 
     res.status(200).json({ message: "Tweet liked" });
   } catch (error: any) {
@@ -349,25 +360,37 @@ export const unlikeTweet = async (req: IAuthenticateRequest, res: Response) => {
 export const retweetTweet =async (req: IAuthenticateRequest, res: Response) => {
   try {
     const userId = req.user?._id;
-    const tweetId = req.params.tweetId;
-    const tweet = await Tweet.findById(tweetId);
+    const tweet = await Tweet.findById(req.params.tweetId);
     if (!tweet) {
       res.status(404).json({ message: "Tweet not found" });
       return;
     }
     // Check if the user has already retweeted this tweet.
-    const isRetweeted = await Tweet.find({author: userId, tweetType: "retweet", originalTweet: tweetId})
+    const isRetweeted = await Tweet.find({author: userId, tweetType: "retweet", originalTweet: tweet._id})
     if (isRetweeted.length > 0) {
       res.status(400).json({ message: "You already retweeted this tweet" });
       return;
     }
     const retweet = new Tweet({
       author:userId,
-      originalTweet: tweetId,
+      originalTweet: tweet._id,
       tweetType: "retweet",
       whoCanReply: "everyone",
       audience: "everyone",
     })
+
+    // create notification
+    if(userId !== tweet.author.toString()) {
+      // create notification
+      await createNotification({
+        type: "retweet",
+        sender: new Types.ObjectId(userId),
+        receiver: tweet.author,
+        tweetId: Object(tweet._id),
+        read: false,
+      })
+    }
+
     await retweet.save();
     res.status(200).json({ message: "Tweet retweeted" });
   } catch (error: any) {
@@ -561,6 +584,7 @@ export const getLikers = async (req: Request, res: Response) => {
 export const createTweet =async (req:IAuthenticateRequest, res: Response) => {
   try {
     const userId = req.user?._id;
+    const originalTweet = await Tweet.findById(req.body?.originalTweet);
 
     // check the poll
     if (req.body.poll) {
@@ -576,15 +600,16 @@ export const createTweet =async (req:IAuthenticateRequest, res: Response) => {
       req.body.media = tenorMedia;
     }
 
-    const tweetData = {
-      author :userId,
+    const tweetData: ITweet = {
+      author: new Types.ObjectId(userId),
       audience: req.body.audience || "everyone",
       whoCanReply: req.body.whoCanReply || "everyone",
       content: req.body?.content,
       media: req.body?.media,
       pollId: req.body?.poll,
       tweetType: req.body.tweetType,
-      originalTweet: req.body?.originalTweet
+      originalTweet: req.body?.originalTweet,
+      view: 1,
     };
 
     const tweet = new Tweet(tweetData);
@@ -609,6 +634,22 @@ export const createTweet =async (req:IAuthenticateRequest, res: Response) => {
     }
     console.log(req.body);
     await tweet.save();
+
+    if(
+      tweet.tweetType === "quote" ||
+      tweet.tweetType === "reply" ||
+      (originalTweet && originalTweet.author !== new Types.ObjectId(userId))
+    ) {
+      // create notification
+      await createNotification({
+        type: tweet.tweetType,
+        sender: new Types.ObjectId(userId),
+        receiver: originalTweet?.author!,
+        tweetId: Object(tweet._id),
+        read: false,
+      })
+    }
+
     res.status(200).json({ message: "Tweet created" });
   } catch (error: any) {
     res.status(500).json({ message: error.message });
@@ -632,12 +673,22 @@ export const deleteTweet = async (req: IAuthenticateRequest, res: Response) => {
       return;
     }
 
+    //remove tweet likes where original id removing tweet
+    await Tweet.deleteMany({originalTweet: tweetId, tweetType: "like"});
+    //remove tweet retweets where original id removing tweet
+    await Tweet.deleteMany({originalTweet: tweetId, tweetType: "retweet"});
+        
+    if(tweet.pollId) {
+      await deletePoll(tweet.pollId);
+    }
+    
+
     if(tweet.media){
       await Promise.all(
         tweet.media.map(async (file: IMedia) => {
           const path = file;
           await deleteFile(path.url);
-        }));
+      }));
     }
 
     await Tweet.findByIdAndDelete(tweetId);

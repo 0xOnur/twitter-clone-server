@@ -1,25 +1,4 @@
-import mongoose, { Schema, Document } from "mongoose";
-
-export interface IMedia {
-  url: string;
-  alt?: string;
-  type: string;
-}
-
-export interface ITweet extends Document {
-  author: mongoose.Types.ObjectId[];
-  audience: "everyone" | "circle";
-  whoCanReply: "everyone" | "following" | "mentioned";
-  content?: string;
-  media?: IMedia[];
-  pollId?: mongoose.Types.ObjectId[];
-  bookmarks? : mongoose.Types.ObjectId[];
-  originalTweet?: mongoose.Types.ObjectId[];
-  tweetType: "tweet" | "reply" | "retweet" | "like" | "quote";
-  view: number;
-  createdAt: Date;
-  updatedAt: Date;
-}
+import mongoose, { Schema } from "mongoose";
 
 const TweetSchema: Schema = new Schema(
   {

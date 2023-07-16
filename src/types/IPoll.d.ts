@@ -5,7 +5,7 @@ interface IChoice {
   percentage?: number;
 }
 
-export interface IPoll {
+interface IPoll {
   author: string;
   choices: IChoice[];
   expiresAt: Date;

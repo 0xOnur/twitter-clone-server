@@ -1,12 +1,10 @@
 import { IAuthenticateRequest } from "../types/IAuthenticateRequest";
 import { Request, Response } from "express";
 import Poll from "../schemas/poll.schema";
-import { IPoll } from "../types/IPoll";
 import { Types } from "mongoose";
 
 // Create Poll
 export const createPoll = async (userId: string, pollData: IPoll) => {
-
   const newPoll = new Poll({
     author: userId, // assuming you have user info in req
     choices: pollData.choices.map((choice) => ({
@@ -23,6 +21,16 @@ export const createPoll = async (userId: string, pollData: IPoll) => {
     throw error;
   }
 };
+
+// Delete Poll
+export const deletePoll = async (pollId : Types.ObjectId) => {
+  try {
+    const deletedPoll = await Poll.findByIdAndDelete(pollId);
+    return deletedPoll;
+  } catch (error) {
+    throw error;
+  }
+}
 
 
 // Get Poll
@@ -86,7 +94,7 @@ export const votePoll =async (req: IAuthenticateRequest, res: Response) => {
 
     //check if user has already voted
     const hasVoted = poll.choices.some((choice) =>
-      choice.votes.includes(new Types.ObjectId(userId))
+      choice.votes.includes(userId!)
     );
 
     if (hasVoted) {
@@ -103,7 +111,7 @@ export const votePoll =async (req: IAuthenticateRequest, res: Response) => {
     }
 
     //add vote to choice
-    choice.votes.push(new Types.ObjectId(userId));
+    choice.votes.push(userId!);
 
     await poll.save();
 

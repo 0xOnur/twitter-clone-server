@@ -7,6 +7,7 @@ import morgan from 'morgan';
 import userRoutes from './routes/user';
 import tweetRoutes from './routes/tweet';
 import pollRoutes from './routes/poll';
+import notificationRoutes from './routes/notification';
 
 dotenv.config();
 
@@ -20,6 +21,7 @@ app.use(cors({credentials: true, origin: "http://localhost:3000"}));
 app.use('/user',userRoutes);
 app.use('/tweet', tweetRoutes);
 app.use('/poll', pollRoutes);
+app.use('/notification', notificationRoutes);
 
 app.get('/', (req, res) => {
     res.status(200).send('Hello World!');

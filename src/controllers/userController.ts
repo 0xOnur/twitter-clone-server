@@ -7,6 +7,7 @@ import User from "../schemas/user.schema";
 import Tweet from "../schemas/tweet.schema";
 import { generateToken, updateToken } from "./tokenController";
 import { uploadFile, deleteFile } from "../services/aws";
+import { createNotification } from "./notificationController";
 
 
 // Login User
@@ -400,19 +401,30 @@ export const whoToFollow = async (req: Request, res: Response) => {
 // Follow User
 export const followUser = async (req: IAuthenticateRequest, res: Response) => {
   try {
-    const user = await User.findById(req.user?._id);
-    if (!user) {
+    const followerUser = await User.findById(req.user?._id);
+    const followedUserId = req.params.userId;
+
+    if (!followerUser) {
       return res.status(404).json({ message: "User not found" });
     }
-    if (user.following.includes(new Types.ObjectId(req.params.userId))) {
+    if (followerUser.following.includes(new Types.ObjectId(req.params.userId))) {
       return res.status(200).json({ message: "Already followed" });
     }
 
-    await User.findByIdAndUpdate(user._id, {
-      $push: { following: req.params.userId },
-    }).then(() => {
-      res.status(200).json({ message: "Followed" });
-    });
+    await User.findByIdAndUpdate(followerUser._id, {
+      $push: { following: followedUserId },
+    })
+
+    // create notification
+    await createNotification({
+      type: "follow",
+      sender: followerUser._id,
+      receiver:  new Types.ObjectId(followedUserId),
+      read: false,
+    })
+
+    res.status(200).json({ message: "Followed" });
+
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }
@@ -424,19 +436,20 @@ export const UnFollowUser = async (
   res: Response
 ) => {
   try {
-    const user = await User.findById(req.user?._id);
-    if (!user) {
+    const followerUser = await User.findById(req.user?._id);
+    if (!followerUser) {
       return res.status(404).json({ message: "User not found" });
     }
-    if (user.following.includes(new Types.ObjectId(req.params.userId))) {
-      await User.findByIdAndUpdate(user._id, {
-        $pull: { following: req.params.userId },
-      }).then(() => {
-        res.status(200).json({ message: "Unfollowed" });
-      });
-    } else {
+    if (!followerUser.following.includes(new Types.ObjectId(req.params.userId))) {
       res.status(200).json({ message: "Already unfollowed" });
     }
+
+    await User.findByIdAndUpdate(followerUser._id, {
+      $pull: { following: req.params.userId },
+    })
+
+    res.status(200).json({ message: "Unfollowed" });
+
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }
