@@ -533,7 +533,7 @@ export const getUserFollowingTweets = async (req: IAuthenticateRequest, res: Res
     following.push(new Types.ObjectId(userId))
     
     const tweets = await Tweet.find(
-      { author: { $in: following } })
+      { author: { $in: following }, tweetType: { $in: ["tweet", "reply", "retweet", "quote"] } })
       .sort({ createdAt: -1 })
       .select("_id")
       .skip(skip)

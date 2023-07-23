@@ -1,6 +1,6 @@
 import mongoose, {Schema} from "mongoose";
 
-const notificationSchema = new Schema({
+const NotificationSchema = new Schema({
     type: {
         type: String,
         enum: ['like', 'retweet', 'reply', 'follow', 'quote'],
@@ -26,4 +26,4 @@ const notificationSchema = new Schema({
     },
 }, {timestamps: true});
 
-export default mongoose.model<INotification>('Notification', notificationSchema);
+export default mongoose.model<INotification>('Notification', NotificationSchema);

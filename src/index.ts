@@ -8,6 +8,7 @@ import userRoutes from './routes/user';
 import tweetRoutes from './routes/tweet';
 import pollRoutes from './routes/poll';
 import notificationRoutes from './routes/notification';
+import chatRoutes from './routes/chat';
 
 dotenv.config();
 
@@ -22,6 +23,7 @@ app.use('/user',userRoutes);
 app.use('/tweet', tweetRoutes);
 app.use('/poll', pollRoutes);
 app.use('/notification', notificationRoutes);
+app.use('/chat', chatRoutes);
 
 app.get('/', (req, res) => {
     res.status(200).send('Hello World!');

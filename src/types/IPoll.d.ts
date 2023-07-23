@@ -1,12 +1,12 @@
 interface IChoice {
-  _id: string,
+  _id: ObjectId,
   text: string;
   votes: string[];
   percentage?: number;
 }
 
 interface IPoll {
-  author: string;
+  author: ObjectId;
   choices: IChoice[];
   expiresAt: Date;
 }
