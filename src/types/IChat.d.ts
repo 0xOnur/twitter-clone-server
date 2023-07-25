@@ -1,7 +1,10 @@
 interface IChat {
-    participants: ObjectId[];
+    participants: {
+        user: ObjectId,
+        hasLeft: boolean,
+        isPinned: boolean;
+    }[];
     isGroupChat?: boolean;
-    isPinned: boolean;
     chatName?: string;
     chatImage?: string;
     lastMessage?: ObjectId;
