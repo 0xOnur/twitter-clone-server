@@ -19,10 +19,16 @@ export const getUserChats = async (
           hasLeft: false,
         },
       },
+      lastMessage: { $exists: true },
     })
       .populate("participants.user", "-password")
       .populate("lastMessage")
       .sort({ updatedAt: -1 });
+
+    // Remove users who have left (hasLeft: true) from the participants array
+    chats.forEach(chat => {
+      chat.participants = chat.participants.filter(participant => !participant.hasLeft);
+    });
 
     res.status(200).json(chats);
   } catch (error) {
@@ -128,6 +134,50 @@ export const deleteConversation = async (
     }
 
     res.status(200).json({ message: "Conversation deleted" });
+  } catch (error) {
+    res.status(500).json(error);
+  }
+};
+
+// Create conversation
+export const createConversation = async (req: IAuthenticateRequest, res: Response) => {
+  try {
+    const userId = req.user?._id;
+    const users:IUser[] = req.body.users;
+
+    let userIDs = users.map(user => user._id);
+
+    if (!userIDs.includes(userId!)) {
+      userIDs.push(userId!);
+    }
+
+    const isGorup = userIDs.length > 2;
+
+    //conversations control where participants already exist
+    const chat = await Chat.findOne({
+      $and: [
+        { 'participants.user': { $all: userIDs.map(id => new Types.ObjectId(id)) } },
+        { 'participants': { $size: userIDs.length } }
+      ]
+    });
+    
+    let participants = userIDs.map(userID => ({
+      user: userID,
+      hasLeft: false,
+      isPinned: false
+    }));
+    
+    if (chat) {
+      return res.status(200).json(chat);
+    }else {
+      const newChat = await Chat.create({
+        participants: participants,
+        isGroupChat: isGorup,
+      });
+      const createdChat = await Chat.findById(newChat._id).populate("participants.user", "-password");
+      res.status(200).json(createdChat);
+    }
+
   } catch (error) {
     res.status(500).json(error);
   }

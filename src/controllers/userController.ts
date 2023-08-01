@@ -347,6 +347,7 @@ export const searchUser = async (req: Request, res: Response) => {
     const regex = new RegExp(req.params.username, "i");
     await User.find({ username: { $regex: regex } })
       .limit(10)
+      .select("username displayName avatar cover bio isVerified")
       .then((searchResult) => {
         res.status(200).json(searchResult);
       });
