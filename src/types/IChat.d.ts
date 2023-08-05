@@ -4,7 +4,7 @@ interface IChat {
         hasLeft: boolean,
         isPinned: boolean;
     }[];
-    isGroupChat?: boolean;
+    isGroupChat: boolean;
     chatName?: string;
     chatImage?: string;
     lastMessage?: ObjectId;
