@@ -22,6 +22,16 @@ const MessageSchema = new Schema({
         type: Schema.Types.ObjectId,
         ref: 'User',
     }],
+    type: {
+        type: String,
+        enum: ['message', 'reply', 'tweet'],
+        default: 'message',
+        required: true
+    },
+    replyTo: {
+        type: Schema.Types.ObjectId,
+        ref: 'Message',
+    }
 }, {timestamps: true});
 
 export default mongoose.model<IMessage>('Message', MessageSchema);

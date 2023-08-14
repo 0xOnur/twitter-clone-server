@@ -3,4 +3,6 @@ interface IMessage {
     sender: ObjectId;
     content: string;
     readBy: ObjectId[];
+    type: "message" | "reply" | "tweet";
+    replyTo?: ObjectId;
 }
