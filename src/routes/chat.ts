@@ -5,10 +5,13 @@ import {
   getChatMessages,
   getUserChats,
   pinConversation,
+  readMessage,
+  sendMessage,
   unpinConversation,
 } from "../controllers/chat.controller";
 import authMiddleware from "../middlewares/authMiddleware";
 import express from "express";
+import { uploadMiddleware } from "../middlewares/uploadFileMiddleware";
 
 // http://localhost:5000/chat/
 const chatRoutes = express.Router();
@@ -23,6 +26,9 @@ chatRoutes.put(
   authMiddleware,
   unpinConversation
 );
+chatRoutes.put("/read-message/:messageId", authMiddleware, readMessage);
+
+chatRoutes.post("/send-message", authMiddleware, uploadMiddleware, sendMessage);
 
 chatRoutes.delete(
   "/delete-conversation/:chatId",

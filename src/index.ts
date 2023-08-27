@@ -1,4 +1,6 @@
 import express from 'express';
+import {createServer} from "http"
+import initializeChatSocket from './sockets/socket';
 import mongoose from 'mongoose';
 import cors from 'cors';
 import dotenv from 'dotenv';
@@ -12,7 +14,11 @@ import chatRoutes from './routes/chat';
 
 dotenv.config();
 
-const app = express();
+export const app = express();
+export const server = createServer(app);
+initializeChatSocket(server);
+
+
 app.use(express.json());
 app.use(helmet());
 app.use(helmet.crossOriginResourcePolicy({policy: 'cross-origin'}));
@@ -32,9 +38,10 @@ app.get('/', (req, res) => {
 const PORT = process.env.PORT || 5000;
 mongoose.set("strictQuery", false);
 mongoose.connect(String(process.env.CONNECTION_URL)).then(() => {
-    app.listen(PORT, () => {
+    server.listen(PORT, () => {
         console.log(`Server running on: http://localhost:${PORT}`);
     });
 }).catch((error) => {
     console.log(error.message);
 });
+

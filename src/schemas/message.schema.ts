@@ -15,7 +15,7 @@ const MessageSchema = new Schema({
         type: String,
         trim: true,
         maxlength: 1000,
-        minlength: 2,
+        minlength: 1,
         required: true
     },
     readBy: [{

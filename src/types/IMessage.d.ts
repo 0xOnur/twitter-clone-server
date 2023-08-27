@@ -2,7 +2,9 @@ interface IMessage {
     chat: ObjectId;
     sender: ObjectId;
     content: string;
-    readBy: ObjectId[];
+    readBy?: ObjectId[];
     type: "message" | "reply" | "tweet";
     replyTo?: ObjectId;
+    createdAt?: Date;
+    updatedAt?: Date;
 }

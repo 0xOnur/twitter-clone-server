@@ -33,8 +33,8 @@ export const getUserChats = async (
     });
 
     res.status(200).json(chats);
-  } catch (error) {
-    res.status(500).json(error);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -66,8 +66,8 @@ export const getChat = async (req: IAuthenticateRequest, res: Response) => {
     );
 
     res.status(200).json(chat);
-  } catch (error) {
-    res.status(500).json(error);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -117,8 +117,8 @@ export const getChatMessages = async (
     };
 
     res.status(200).json(response);
-  } catch (error) {
-    res.status(500).json(error);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -146,8 +146,8 @@ export const pinConversation = async (
     await chat.save();
 
     res.status(200).json({ message: "Conversation pinned" });
-  } catch (error) {
-    res.status(500).json(error);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -176,8 +176,8 @@ export const unpinConversation = async (
     await chat.save();
 
     res.status(200).json({ message: "Conversation unpinned" });
-  } catch (error) {
-    res.status(500).json(error);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -212,8 +212,8 @@ export const deleteConversation = async (
     }
 
     res.status(200).json({ message: "Conversation deleted" });
-  } catch (error) {
-    res.status(500).json(error);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -265,7 +265,66 @@ export const createConversation = async (
       );
       res.status(200).json(createdChat);
     }
-  } catch (error) {
-    res.status(500).json(error);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
   }
 };
+
+// Send message
+export const sendMessage = async (
+  req:IAuthenticateRequest,
+  res: Response
+) => {
+  try {
+    const userId = req.user?._id;
+
+    const messageData: IMessage = {
+      chat: req.body.chat,
+      sender: new Types.ObjectId(userId),
+      content: req.body.content,
+      replyTo: req.body.replyTo,
+      type: req.body.type,
+    };
+
+    const message = new Message(messageData);
+
+    await message.save();
+
+    const chat = await Chat.findById(messageData.chat);
+    //update last message
+    chat!.lastMessage = message._id;
+    await chat!.save();
+
+    res.status(200).json(message);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Read message
+export const readMessage = async (
+  req: IAuthenticateRequest,
+  res: Response
+) => {
+  try {
+    const userId = new Types.ObjectId(req.user?._id);
+    const messageId = req.params.messageId;
+
+    const message = await Message.findById(messageId);
+
+    if (!message) {
+      return res.status(404).json("Message not found");
+    }
+
+    const isRead = message.readBy!.includes(userId);
+
+    if(!isRead) {
+      message.readBy!.push(userId);
+      await message.save();
+    }
+
+    res.status(200).json({ message: "Message read" });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+}
