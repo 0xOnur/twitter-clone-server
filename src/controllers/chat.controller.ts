@@ -223,7 +223,7 @@ export const createConversation = async (
   res: Response
 ) => {
   try {
-    const userId = req.user?._id;
+    const userId = new Types.ObjectId(req.user?._id);
     const users: IUser[] = req.body.users;
 
     let userIDs = users.map((user) => user._id);
@@ -248,11 +248,17 @@ export const createConversation = async (
 
     let participants = userIDs.map((userID) => ({
       user: userID,
-      hasLeft: false,
-      isPinned: false,
     }));
 
     if (chat) {
+      //if req user has left the cat re-activate user
+      const participant = chat.participants.find((p) =>
+        p.user.equals(userId)
+      );
+      if (participant?.hasLeft) {
+        participant.hasLeft = false;
+        await chat.save();
+      }
       return res.status(200).json(chat);
     } else {
       const newChat = await Chat.create({
@@ -276,7 +282,7 @@ export const sendMessage = async (
   res: Response
 ) => {
   try {
-    const userId = req.user?._id;
+    const userId = new Types.ObjectId(req.user?._id);
 
     const messageData: IMessage = {
       chat: req.body.chat,

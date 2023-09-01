@@ -63,6 +63,7 @@ export default function initializeChatSocket(server: any) {
     });
 
     socket.on("readMessage", ({ conversationId, message }) => {
+      socket.broadcast.to(conversationId).emit("readMessage", message);
       console.log("readMessage", { conversationId:conversationId, message: message, userId: socket.userId });
     });
 
