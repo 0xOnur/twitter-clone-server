@@ -1,6 +1,7 @@
 import {
   createConversation,
   deleteConversation,
+  deleteMessage,
   getChat,
   getChatMessages,
   getUserChats,
@@ -29,6 +30,7 @@ chatRoutes.put(
 chatRoutes.put("/read-message/:messageId", authMiddleware, readMessage);
 
 chatRoutes.post("/send-message", authMiddleware, uploadMiddleware, sendMessage);
+chatRoutes.delete("/delete-message/:messageId", authMiddleware, deleteMessage);
 
 chatRoutes.delete(
   "/delete-conversation/:chatId",

@@ -11,6 +11,11 @@ const MessageSchema = new Schema({
         ref: 'User',
         required: true,
     },
+    //users who removed message
+    removedBy: [{
+        type: Schema.Types.ObjectId,
+        ref: 'User',
+    }],
     content: {
         type: String,
         trim: true,

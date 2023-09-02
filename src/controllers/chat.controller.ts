@@ -95,6 +95,7 @@ export const getChatMessages = async (
 
     const messages = await Message.find({
       chat: chatId,
+      removedBy: { $ne: req.user?._id },
     })
       .sort({ createdAt: -1 })
       .skip(skip)
@@ -330,6 +331,36 @@ export const readMessage = async (
     }
 
     res.status(200).json({ message: "Message read" });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+}
+
+// Delete message (hidden message who requested user)
+export const deleteMessage = async (
+  req: IAuthenticateRequest,
+  res: Response
+) => {
+  try {
+    const userId = new Types.ObjectId(req.user?._id);
+    const messageId = req.params.messageId;
+
+    const message = await Message.findById(messageId);
+
+    if (!message) {
+      return res.status(404).json("Message not found");
+    }
+
+    const isRemoved = message?.removedBy!.includes(userId);
+
+    if(isRemoved) {
+      return res.status(404).json("Message already removed");
+    }
+
+    message.removedBy!.push(userId);
+    await message.save();
+
+    res.status(200).json({ message: "Message removed" });
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }
