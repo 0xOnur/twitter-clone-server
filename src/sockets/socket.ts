@@ -1,9 +1,12 @@
-import { Server, Socket } from "socket.io";
+import { Server } from "socket.io";
+import {Server as HTTPServer} from "http"
 import { ISocket } from "../types/ISocket";
 import chatSchema from "../schemas/chat.schema";
 
-export default function initializeChatSocket(server: any) {
-  const io = new Server(server, {
+export let io: Server;
+
+export default function initializeChatSocket(server: HTTPServer) {
+  io = new Server(server, {
     cors: {
       origin: "http://localhost:3000", // Uygun CORS ayarlarınızı yapın
       methods: ["GET", "POST"],
@@ -24,7 +27,6 @@ export default function initializeChatSocket(server: any) {
       userId: socket.userId,
       socketId: socket.id,
     });
-
     socket.join(socket.userId!);
 
     const conversations = (
@@ -55,16 +57,6 @@ export default function initializeChatSocket(server: any) {
         conversationId: conversationId,
         userId: socket.userId,
       });
-    });
-
-    socket.on("sendMessage", ({ conversationId, message }) => {
-      console.log(conversationId, message);
-      socket.broadcast.to(conversationId).emit("getMessage", message);
-    });
-
-    socket.on("readMessage", ({ conversationId, message }) => {
-      socket.broadcast.to(conversationId).emit("readMessage", message);
-      console.log("readMessage", { conversationId:conversationId, message: message, userId: socket.userId });
     });
 
     socket.on("disconnect", () => {

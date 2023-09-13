@@ -1,11 +1,12 @@
 interface IMessage {
-    chat: ObjectId;
-    sender: ObjectId;
-    removedBy?: ObjectId[];
-    content: string;
-    readBy?: ObjectId[];
-    type: "message" | "reply" | "tweet";
-    replyTo?: ObjectId;
+    chat: IObjectId;
+    sender: IObjectId;
+    removedBy?: IObjectId[];
+    content?: string;
+    readBy?: IObjectId[];
+    type?: "message" | "reply" | "tweet";
+    replyTo?: IObjectId;
+    tweet?: IObjectId;
     createdAt?: Date;
     updatedAt?: Date;
 }

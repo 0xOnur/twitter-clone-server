@@ -8,6 +8,7 @@ import {
   pinConversation,
   readMessage,
   sendMessage,
+  sendTweet,
   unpinConversation,
 } from "../controllers/chat.controller";
 import authMiddleware from "../middlewares/authMiddleware";
@@ -30,6 +31,7 @@ chatRoutes.put(
 chatRoutes.put("/read-message/:messageId", authMiddleware, readMessage);
 
 chatRoutes.post("/send-message", authMiddleware, uploadMiddleware, sendMessage);
+chatRoutes.post("/send-tweet", authMiddleware, sendTweet);
 chatRoutes.delete("/delete-message/:messageId", authMiddleware, deleteMessage);
 
 chatRoutes.delete(

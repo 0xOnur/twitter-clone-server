@@ -21,7 +21,6 @@ const MessageSchema = new Schema({
         trim: true,
         maxlength: 1000,
         minlength: 1,
-        required: true
     },
     readBy: [{
         type: Schema.Types.ObjectId,
@@ -32,6 +31,10 @@ const MessageSchema = new Schema({
         enum: ['message', 'reply', 'tweet'],
         default: 'message',
         required: true
+    },
+    tweet: {
+        type: Schema.Types.ObjectId,
+        ref: 'Tweet',
     },
     replyTo: {
         type: Schema.Types.ObjectId,

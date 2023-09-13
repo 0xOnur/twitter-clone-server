@@ -1,8 +1,18 @@
 import { IAuthenticateRequest } from "../types/IAuthenticateRequest";
-import { Request, Response } from "express";
+import { Response } from "express";
 import Chat from "../schemas/chat.schema";
 import Message from "../schemas/message.schema";
+import Tweet from "../schemas/tweet.schema";
 import { Types } from "mongoose";
+import {
+  findConversationAmongUsers,
+  reactivateUserIfLeftChat,
+  ensureConversationsExist,
+  sendMessageToAllChats, 
+  sendSingleMessage,
+  broadcastReadStatus,
+} from "../helpers/chat.helpers";
+import {io} from "../sockets/socket";
 
 // Get User Chats
 export const getUserChats = async (
@@ -83,9 +93,9 @@ export const getChatMessages = async (
     const page = parseInt(req.query.page as string) || 1;
     const perPage = parseInt(req.query.limit as string) || 10;
 
-     // Calculate the number of documents to skip
-     let skip = (page - 1) * perPage;
-     let limit = perPage;
+    // Calculate the number of documents to skip
+    let skip = (page - 1) * perPage;
+    let limit = perPage;
 
     const chat = Chat.findById(chatId);
 
@@ -102,10 +112,10 @@ export const getChatMessages = async (
       .limit(limit)
       .populate("sender", "username displayName avatar cover isVerified")
       .populate("readBy", "username displayName avatar cover isVerified")
-      .populate("replyTo")
+      .populate("replyTo");
 
     // Find the total number of user documents in the database
-    const totalItems = await Message.countDocuments({chat: chatId});
+    const totalItems = await Message.countDocuments({ chat: chatId });
     const totalPages = Math.ceil(totalItems / limit);
 
     // Construct the response
@@ -235,53 +245,33 @@ export const createConversation = async (
 
     const isGorup = userIDs.length > 2;
 
-    //conversations control where participants already exist
-    const chat = await Chat.findOne({
-      $and: [
-        {
-          "participants.user": {
-            $all: userIDs.map((id) => new Types.ObjectId(id)),
-          },
-        },
-        { participants: { $size: userIDs.length } },
-      ],
-    });
-
-    let participants = userIDs.map((userID) => ({
-      user: userID,
-    }));
+    //check if a chat already exists with the selected users
+    const chat = await findConversationAmongUsers(userIDs);
 
     if (chat) {
       //if req user has left the cat re-activate user
-      const participant = chat.participants.find((p) =>
-        p.user.equals(userId)
-      );
-      if (participant?.hasLeft) {
-        participant.hasLeft = false;
-        await chat.save();
-      }
+      reactivateUserIfLeftChat(chat, userId);
       return res.status(200).json(chat);
-    } else {
-      const newChat = await Chat.create({
-        participants: participants,
-        isGroupChat: isGorup,
-      });
-      const createdChat = await Chat.findById(newChat._id).populate(
-        "participants.user",
-        "-password"
-      );
-      res.status(200).json(createdChat);
     }
+
+    let participants = userIDs.map((userID) => ({ user: userID }));
+
+    const newChat = await Chat.create({
+      participants: participants,
+      isGroupChat: isGorup,
+    });
+    const createdChat = await Chat.findById(newChat._id).populate(
+      "participants.user",
+      "-password"
+    );
+    res.status(200).json(createdChat);
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }
 };
 
 // Send message
-export const sendMessage = async (
-  req:IAuthenticateRequest,
-  res: Response
-) => {
+export const sendMessage = async (req: IAuthenticateRequest, res: Response) => {
   try {
     const userId = new Types.ObjectId(req.user?._id);
 
@@ -293,26 +283,65 @@ export const sendMessage = async (
       type: req.body.type,
     };
 
-    const message = new Message(messageData);
+    const result = sendSingleMessage(messageData)
 
-    await message.save();
+    res.status(200).json(result);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+};
 
-    const chat = await Chat.findById(messageData.chat);
-    //update last message
-    chat!.lastMessage = message._id;
-    await chat!.save();
+// Send Tweet
+export const sendTweet = async (req: IAuthenticateRequest, res: Response) => {
+  try {
+    const senderId = new Types.ObjectId(req.user?._id);
 
-    res.status(200).json(message);
+    const {tweetId, messageContent, selectedUsers, selectedConversations } = req.body;
+    console.log("🚀 ~ file: chat.controller.ts:300 ~ sendTweet ~ tweetId:", tweetId)
+
+    const tweet = await Tweet.findById(tweetId);
+
+    if (!tweet) {
+      return res.status(404).json({ message: "Tweet can not found" });
+    }
+
+    if (selectedUsers.length < 1 && selectedConversations.length < 1) {
+      return res.status(400).json({ message: "Please select a user or conversation" });
+    }
+
+    let conversationsIDs: string[] = selectedConversations.map((conv: IChat) => conv._id);
+    const userIDs: string[] = selectedUsers.map((user: IUser) => user._id);
+
+    if (userIDs.length > 0) {
+      conversationsIDs = await ensureConversationsExist(
+        senderId,
+        userIDs,
+        conversationsIDs
+      );
+    };
+
+    const result = await sendMessageToAllChats (
+      senderId,
+      tweetId,
+      messageContent,
+      conversationsIDs
+    );
+    
+    if (result.success) {
+      res.status(200).json({ message: "Messages sent successfully." });
+    }else {
+      return res.status(400).json({
+        error: result.error || "Unknown error occurred."
+      });
+    }
+
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }
 };
 
 // Read message
-export const readMessage = async (
-  req: IAuthenticateRequest,
-  res: Response
-) => {
+export const readMessage = async (req: IAuthenticateRequest, res: Response) => {
   try {
     const userId = new Types.ObjectId(req.user?._id);
     const messageId = req.params.messageId;
@@ -323,18 +352,21 @@ export const readMessage = async (
       return res.status(404).json("Message not found");
     }
 
+    const chatId = message.chat;
     const isRead = message.readBy!.includes(userId);
 
-    if(!isRead) {
+    if (!isRead) {
       message.readBy!.push(userId);
       await message.save();
     }
+
+    broadcastReadStatus(chatId.toString(), message)
 
     res.status(200).json({ message: "Message read" });
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }
-}
+};
 
 // Delete message (hidden message who requested user)
 export const deleteMessage = async (
@@ -353,7 +385,7 @@ export const deleteMessage = async (
 
     const isRemoved = message?.removedBy!.includes(userId);
 
-    if(isRemoved) {
+    if (isRemoved) {
       return res.status(404).json("Message already removed");
     }
 
@@ -364,4 +396,4 @@ export const deleteMessage = async (
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }
-}
+};

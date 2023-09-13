@@ -9,7 +9,7 @@ interface IUser extends IDocument {
     website?: string;
     avatar?: string;
     cover?: string;
-    following: ObjectId[];
+    following: IObjectId[];
     followers?: IUser[]
     birthDay?: {
       day: number;
