@@ -8,11 +8,10 @@ import {
   findConversationAmongUsers,
   reactivateUserIfLeftChat,
   ensureConversationsExist,
-  sendMessageToAllChats, 
+  sendMessageToAllChats,
   sendSingleMessage,
   broadcastReadStatus,
 } from "../helpers/chat.helpers";
-import {io} from "../sockets/socket";
 
 // Get User Chats
 export const getUserChats = async (
@@ -32,7 +31,13 @@ export const getUserChats = async (
       lastMessage: { $exists: true },
     })
       .populate("participants.user", "-password")
-      .populate("lastMessage")
+      .populate({
+        path: "lastMessage",
+        populate: {
+          path: "sender",
+          select: "-password",
+        },
+      })
       .sort({ updatedAt: -1 });
 
     // Remove users who have left (hasLeft: true) from the participants array
@@ -62,9 +67,14 @@ export const getChat = async (req: IAuthenticateRequest, res: Response) => {
           hasLeft: false,
         },
       },
-    })
-      .populate("participants.user", "-password")
-      .populate("lastMessage");
+    }).populate("participants.user", "-password")
+    .populate({
+      path: "lastMessage",
+      populate: {
+        path: "sender",
+        select: "-password",
+      },
+    });
 
     if (!chat) {
       return res.status(404).json("Chat not found");
@@ -283,7 +293,7 @@ export const sendMessage = async (req: IAuthenticateRequest, res: Response) => {
       type: req.body.type,
     };
 
-    const result = sendSingleMessage(messageData)
+    const result = sendSingleMessage(messageData);
 
     res.status(200).json(result);
   } catch (error: any) {
@@ -296,8 +306,7 @@ export const sendTweet = async (req: IAuthenticateRequest, res: Response) => {
   try {
     const senderId = new Types.ObjectId(req.user?._id);
 
-    const {tweetId, messageContent, selectedUsers, selectedConversations } = req.body;
-    console.log("🚀 ~ file: chat.controller.ts:300 ~ sendTweet ~ tweetId:", tweetId)
+    const { tweetId, messageContent, selectedUsers, selectedConversations } = req.body;
 
     const tweet = await Tweet.findById(tweetId);
 
@@ -306,10 +315,14 @@ export const sendTweet = async (req: IAuthenticateRequest, res: Response) => {
     }
 
     if (selectedUsers.length < 1 && selectedConversations.length < 1) {
-      return res.status(400).json({ message: "Please select a user or conversation" });
+      return res
+        .status(400)
+        .json({ message: "Please select a user or conversation" });
     }
 
-    let conversationsIDs: string[] = selectedConversations.map((conv: IChat) => conv._id);
+    let conversationsIDs: string[] = selectedConversations.map(
+      (conv: IChat) => conv._id
+    );
     const userIDs: string[] = selectedUsers.map((user: IUser) => user._id);
 
     if (userIDs.length > 0) {
@@ -318,23 +331,22 @@ export const sendTweet = async (req: IAuthenticateRequest, res: Response) => {
         userIDs,
         conversationsIDs
       );
-    };
+    }
 
-    const result = await sendMessageToAllChats (
+    const result = await sendMessageToAllChats(
       senderId,
       tweetId,
       messageContent,
       conversationsIDs
     );
-    
+
     if (result.success) {
       res.status(200).json({ message: "Messages sent successfully." });
-    }else {
+    } else {
       return res.status(400).json({
-        error: result.error || "Unknown error occurred."
+        error: result.error || "Unknown error occurred.",
       });
     }
-
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }
@@ -360,7 +372,7 @@ export const readMessage = async (req: IAuthenticateRequest, res: Response) => {
       await message.save();
     }
 
-    broadcastReadStatus(chatId.toString(), message)
+    broadcastReadStatus(chatId.toString(), message);
 
     res.status(200).json({ message: "Message read" });
   } catch (error: any) {
