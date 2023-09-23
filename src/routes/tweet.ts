@@ -18,12 +18,12 @@ import {
     deleteTweet,
 } from "../controllers/tweetControlleer"
 import authMiddleware from "../middlewares/authMiddleware";
-import { uploadMiddleware } from "../middlewares/uploadFileMiddleware";
+import { tweetMediaMiddleware } from "../middlewares/tweetMediaMiddleware";
 
 // http://localhost:5000/tweet/
 const tweetRoutes = express.Router();
 
-tweetRoutes.post("/create-tweet/", authMiddleware, uploadMiddleware, createTweet);
+tweetRoutes.post("/create-tweet/", authMiddleware, tweetMediaMiddleware, createTweet);
 tweetRoutes.delete("/delete-tweet/:tweetId", authMiddleware, deleteTweet);
 
 tweetRoutes.get("/get-tweet/:tweetId", getSpecificTweet);

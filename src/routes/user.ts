@@ -1,5 +1,5 @@
+import authMiddleware from "../middlewares/authMiddleware";
 import express from "express";
-import multer from "multer";
 import {
   updateAccessToken,
   LoginUser,
@@ -22,26 +22,23 @@ import {
   getUserFollowingTweets,
   getUserBookmarks,
 } from "../controllers/userController";
-import authMiddleware from "../middlewares/authMiddleware";
+import { avatarAndCover } from "../middlewares/avatarAndCover";
 
 // http://localhost:5000/user/
 const userRoutes = express.Router();
-const storage = multer.memoryStorage();
-const upload = multer({ storage: storage });
+// const storage = multer.memoryStorage();
+// const upload = multer({ storage: storage });
 
 userRoutes.post("/update-token", updateAccessToken);
 
 userRoutes.post("/login", LoginUser);
-userRoutes.post("/create-user", upload.single("avatar"), createUser);
+userRoutes.post("/create-user", avatarAndCover, createUser);
 
 // update user with cover and avatar images
 userRoutes.put(
   "/update-user/",
   authMiddleware,
-  upload.fields([
-    { name: "avatar", maxCount: 1 },
-    { name: "cover", maxCount: 1 },
-  ]),
+  avatarAndCover,
   updateUser
 );
 

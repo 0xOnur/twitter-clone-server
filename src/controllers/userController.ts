@@ -71,9 +71,8 @@ export const updateAccessToken = async (req: Request, res: Response) => {
 };
 
 // Create a User
-export const createUser = async (req: Request, res: Response) => {
+export const createUser = async (req: IAuthenticateRequest, res: Response) => {
   try {
-    console.log(req.file);
     console.log(req.body);
 
     const emailRegex = /^\S+@\S+\.\S+$/;
@@ -99,13 +98,16 @@ export const createUser = async (req: Request, res: Response) => {
 
     await user.validate();
 
-    if (req.file) {
-      await uploadFile({
-        file: req.file,
-        folder: `Users/${user._id}`,
-      }).then((res) => {
-        user.avatar = res?.url;
-      });
+    if (req.files) {
+      if (req.files.avatar) {
+        const file: Express.Multer.File = req.files.avatar[0];
+        await uploadFile({
+          file: file,
+          folder: `Users/${user._id}`,
+        }).then((res) => {
+          user.avatar = res?.url;
+        });
+      }
     }
 
     await user.save();
@@ -131,23 +133,25 @@ export const updateUser = async (req: IAuthenticateRequest, res: Response) => {
       return;
     }
     const newUserData = {
-      cover: req.body.cover,
+      cover: req.body.coverURL,
       avatar: req.body.avatar === "null" ? null : user.avatar,
       displayName: req.body?.displayName,
-      username: req.body?.username,
       bio: req.body?.bio,
       location: req.body?.location,
       website: req.body?.website,
     };
 
+    const isCoverBeRemove = user.cover && user.cover !== "null" && user.cover !== newUserData.cover;
+
     //delete old avatar from aws
-    if ((req.body.avatar === "null" || req.files.avatar) && user.avatar) {
+    if (req.files.avatar && user.avatar) {
+      console.log("avatar silindi");
       await deleteFile(user.avatar);
     }
 
     // delete old cover from aws
-    if ((req.body.cover === "null" || req.files.cover) && user.cover) {
-      await deleteFile(user.cover);
+    if (isCoverBeRemove) {
+      await deleteFile(user.cover!);
     }
 
     if (req.files) {
@@ -160,8 +164,8 @@ export const updateUser = async (req: IAuthenticateRequest, res: Response) => {
           newUserData.avatar = res?.url;
         });
       }
-      if (req.files.cover) {
-        const file: Express.Multer.File = req.files.cover[0];
+      if (req.files.coverFile) {
+        const file: Express.Multer.File = req.files.coverFile[0];
         await uploadFile({
           file: file,
           folder: `Users/${user._id}`,
@@ -170,7 +174,6 @@ export const updateUser = async (req: IAuthenticateRequest, res: Response) => {
         });
       }
     }
-    console.log(newUserData);
 
     await User.findByIdAndUpdate(req.user?._id, newUserData, { new: true });
     res.status(200).json({ message: "User updated" });

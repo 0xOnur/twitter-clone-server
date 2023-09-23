@@ -61,8 +61,8 @@ export const deleteFile = async (url: string) => {
     };
     const command = new DeleteObjectCommand(params);
     const data = await s3.send(command);
-    console.log(data);
+    // console.log(data);
   } catch (error:any) {
-    console.log(error.message);
+    // console.log(error.message);
   }
 };

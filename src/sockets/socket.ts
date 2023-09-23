@@ -23,10 +23,6 @@ export default function initializeChatSocket(server: HTTPServer) {
   });
 
   io.on("connection", async (socket: ISocket) => {
-    console.log("User conncected:", {
-      userId: socket.userId,
-      socketId: socket.id,
-    });
     socket.join(socket.userId!);
 
     const conversations = (
@@ -45,22 +41,10 @@ export default function initializeChatSocket(server: HTTPServer) {
 
     socket.on("joinConversation", (conversationId: string) => {
       socket.join(conversationId);
-      console.log("joinConversation", {
-        conversationId: conversationId,
-        userId: socket.userId,
-      });
     });
 
     socket.on("leaveConversation", (conversationId: string) => {
       socket.leave(conversationId);
-      console.log("leaveConversation", {
-        conversationId: conversationId,
-        userId: socket.userId,
-      });
-    });
-
-    socket.on("disconnect", () => {
-      console.log("Kullanıcı bağlantıyı kesti:", socket.id);
     });
   });
 }

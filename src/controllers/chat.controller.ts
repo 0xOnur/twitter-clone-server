@@ -12,6 +12,7 @@ import {
   sendSingleMessage,
   broadcastReadStatus,
 } from "../helpers/chat.helpers";
+import { deleteFile, uploadFile } from "../services/aws";
 
 // Get User Chats
 export const getUserChats = async (
@@ -409,3 +410,49 @@ export const deleteMessage = async (
     res.status(500).json({ message: error.message });
   }
 };
+
+// Edit group chat name&avatar
+export const editGroup =async (req: IAuthenticateRequest, res: Response) => {
+  try {
+    const userId = new Types.ObjectId(req.user?._id);
+    const chatId = req.body.chatId;
+
+    const chat = await Chat.findById(chatId);
+
+    if (!chat) {
+      return res.status(404).json("Chat not found");
+    }
+
+    const participant = chat.participants.find((p) => p.user.equals(userId));
+
+    if (!participant) {
+      return res.status(404).json("You are not a participant of this chat");
+    }
+
+    const {chatName} = req.body;
+
+    if(req.files.avatar){
+      const file = req.files.avatar[0];
+
+      // check and remove old chat image
+      if(chat.chatImage) {
+        await deleteFile(chat.chatImage);
+      }
+
+      // upload new chat image
+      await uploadFile({
+        file: file,
+        folder: `Chats/${chatId}`,
+      }).then((res) => {
+        chat.chatImage = res?.url;
+      })
+    }
+
+    chat.chatName = chatName;
+    await chat.save();
+
+    res.status(200).json({ message: "Group chat updated" });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+}

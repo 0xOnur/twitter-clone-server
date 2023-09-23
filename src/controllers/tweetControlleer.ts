@@ -1,6 +1,7 @@
 import { IAuthenticateRequest } from "../types/IAuthenticateRequest";
 import { uploadFile, deleteFile } from "../services/aws";
 import Tweet from "../schemas/tweet.schema";
+import Notification from "../schemas/notification.schema"
 import { createPoll, deletePoll } from "./pollController";
 import { Request, Response } from "express";
 import { Types } from "mongoose";
@@ -677,6 +678,8 @@ export const deleteTweet = async (req: IAuthenticateRequest, res: Response) => {
     await Tweet.deleteMany({originalTweet: tweetId, tweetType: "like"});
     //remove tweet retweets where original id removing tweet
     await Tweet.deleteMany({originalTweet: tweetId, tweetType: "retweet"});
+    //remove notifications
+    await Notification.deleteMany({"tweetId": tweet});
         
     if(tweet.pollId) {
       await deletePoll(tweet.pollId);
