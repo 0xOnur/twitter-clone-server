@@ -262,6 +262,7 @@ export const createConversation = async (
     if (chat) {
       //if req user has left the cat re-activate user
       reactivateUserIfLeftChat(chat, userId);
+      await chat.save();
       return res.status(200).json(chat);
     }
 
@@ -452,6 +453,45 @@ export const editGroup =async (req: IAuthenticateRequest, res: Response) => {
     await chat.save();
 
     res.status(200).json({ message: "Group chat updated" });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+}
+
+// Add users to group
+export const addUsersToGroup = async (req: IAuthenticateRequest, res: Response) => {
+  try {
+    const userId = new Types.ObjectId(req.user?._id);
+    const chatId = req.params.chatId;
+    const users: IUser[] = req.body.users;
+
+    const chat = await Chat.findById(chatId);
+    if (!chat || !chat.isGroupChat) {
+      return res.status(404).json("Chat not found");
+    }
+
+    const participants = chat.participants.filter((participant) => participant.user).map((user) => user.user._id.toString());
+    if (!participants.includes(userId.toString())) {
+      return res.status(404).json("You are not a participant of this chat");
+    }
+
+    const userIDs = users.map((user) => user._id);
+
+     // Reactivate users who left and filter out users who are already in the chat
+    const usersAlreadyInChat = userIDs.filter((userID) => participants.includes(userID));
+    usersAlreadyInChat.forEach((userId: string) => {
+      reactivateUserIfLeftChat(chat, userId)
+    })
+
+    // Determine new users to add to the chat
+    const newUsers = userIDs.filter((userID) => !usersAlreadyInChat.includes(userID));
+    const newParticipants = newUsers.map((userID) => ({ user: userID }));
+
+    // Add new users to the chat
+    chat.participants = [...chat.participants, ...newParticipants];
+    await chat.save();
+
+    res.status(200).json({ message: "Users added to group" });
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }

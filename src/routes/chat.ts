@@ -1,4 +1,5 @@
 import {
+  addUsersToGroup,
   createConversation,
   deleteConversation,
   deleteMessage,
@@ -32,6 +33,7 @@ chatRoutes.put(
 );
 chatRoutes.put("/read-message/:messageId", authMiddleware, readMessage);
 chatRoutes.put("/edit-group", authMiddleware, avatarAndCover, editGroup);
+chatRoutes.put("/add-user-to-group/:chatId", authMiddleware, addUsersToGroup);
 
 chatRoutes.post("/send-message", authMiddleware, tweetMediaMiddleware, sendMessage);
 chatRoutes.post("/send-tweet", authMiddleware, sendTweet);

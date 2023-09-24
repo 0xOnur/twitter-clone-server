@@ -60,7 +60,6 @@ export const reactivateUserIfLeftChat = async (chat: any, userId: Object) => {
 
   if (participant?.hasLeft) {
     participant.hasLeft = false;
-    await chat.save();
   }
 };
 
