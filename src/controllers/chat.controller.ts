@@ -123,7 +123,14 @@ export const getChatMessages = async (
       .limit(limit)
       .populate("sender", "username displayName avatar cover isVerified")
       .populate("readBy", "username displayName avatar cover isVerified")
-      .populate("replyTo");
+      .populate("replyTo")
+      .populate({
+        path: "tweet",
+        populate: {
+          path: "author",
+          select: "-password",
+        },
+      });
 
     // Find the total number of user documents in the database
     const totalItems = await Message.countDocuments({ chat: chatId });
