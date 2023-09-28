@@ -18,10 +18,11 @@ const upload = multer({
   { name: "avatar", maxCount: 1 },
   { name: "cover", maxCount: 1 },
   { name: "coverFile", maxCount: 1 },
+  { name: "chatImage", maxCount: 1}
 ]);
 
 // Middleware for single image upload with size control
-export const avatarAndCover: RequestHandler = (req: Request, res, next) => {
+export const imageUploadMiddleware: RequestHandler = (req: Request, res, next) => {
   upload(req, res, (err: any) => {
     if (err instanceof MulterError) {
       // A Multer error occurred when uploading.

@@ -3,6 +3,10 @@ interface IMessage {
     sender: IObjectId;
     removedBy?: IObjectId[];
     content?: string;
+    media?: {
+        url: string;
+        type: string;
+    };
     readBy?: IObjectId[];
     type?: "message" | "reply" | "tweet";
     replyTo?: IObjectId;

@@ -22,7 +22,7 @@ import {
   getUserFollowingTweets,
   getUserBookmarks,
 } from "../controllers/userController";
-import { avatarAndCover } from "../middlewares/avatarAndCover";
+import { imageUploadMiddleware } from "../middlewares/imageUploadMiddleware";
 
 // http://localhost:5000/user/
 const userRoutes = express.Router();
@@ -32,13 +32,13 @@ const userRoutes = express.Router();
 userRoutes.post("/update-token", updateAccessToken);
 
 userRoutes.post("/login", LoginUser);
-userRoutes.post("/create-user", avatarAndCover, createUser);
+userRoutes.post("/create-user", imageUploadMiddleware, createUser);
 
 // update user with cover and avatar images
 userRoutes.put(
   "/update-user/",
   authMiddleware,
-  avatarAndCover,
+  imageUploadMiddleware,
   updateUser
 );
 

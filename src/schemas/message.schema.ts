@@ -20,7 +20,14 @@ const MessageSchema = new Schema({
         type: String,
         trim: true,
         maxlength: 1000,
-        minlength: 1,
+    },
+    media: {
+        url: {
+            type: String,
+        },
+        type: {
+            type: String,
+        },
     },
     readBy: [{
         type: Schema.Types.ObjectId,

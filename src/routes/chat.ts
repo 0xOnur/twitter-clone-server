@@ -13,8 +13,7 @@ import {
   sendTweet,
   unpinConversation,
 } from "../controllers/chat.controller";
-import { tweetMediaMiddleware } from "../middlewares/tweetMediaMiddleware";
-import { avatarAndCover } from "../middlewares/avatarAndCover";
+import { imageUploadMiddleware } from "../middlewares/imageUploadMiddleware";
 import authMiddleware from "../middlewares/authMiddleware";
 import express from "express";
 
@@ -32,10 +31,10 @@ chatRoutes.put(
   unpinConversation
 );
 chatRoutes.put("/read-message/:messageId", authMiddleware, readMessage);
-chatRoutes.put("/edit-group", authMiddleware, avatarAndCover, editGroup);
+chatRoutes.put("/edit-group", authMiddleware, imageUploadMiddleware, editGroup);
 chatRoutes.put("/add-user-to-group/:chatId", authMiddleware, addUsersToGroup);
 
-chatRoutes.post("/send-message", authMiddleware, tweetMediaMiddleware, sendMessage);
+chatRoutes.post("/send-message", authMiddleware, imageUploadMiddleware, sendMessage);
 chatRoutes.post("/send-tweet", authMiddleware, sendTweet);
 
 chatRoutes.delete("/delete-message/:messageId", authMiddleware, deleteMessage);

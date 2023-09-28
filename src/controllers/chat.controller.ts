@@ -293,6 +293,23 @@ export const createConversation = async (
 export const sendMessage = async (req: IAuthenticateRequest, res: Response) => {
   try {
     const userId = new Types.ObjectId(req.user?._id);
+    const chatId = req.body.chat;
+
+    let mediaURL = req.body.gif;
+    let mediatype = "image";
+
+    if(req.files) {
+      if(req.files.chatImage) {
+        const file: Express.Multer.File = req.files.chatImage[0];
+        mediatype = file.mimetype.split("/")[0]
+        await uploadFile({
+          file: file,
+          folder: `Chats/${chatId}/media`,
+        }).then((res) => {
+          mediaURL = res?.url;
+        }) 
+      }
+    }
 
     const messageData: IMessage = {
       chat: req.body.chat,
@@ -300,6 +317,13 @@ export const sendMessage = async (req: IAuthenticateRequest, res: Response) => {
       content: req.body.content,
       replyTo: req.body.replyTo,
       type: req.body.type,
+    };
+
+    if(mediaURL) {
+      messageData.media = {
+        url: mediaURL,
+        type: mediatype,
+      }
     };
 
     const result = sendSingleMessage(messageData);
