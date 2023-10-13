@@ -8,7 +8,7 @@ export let io: Server;
 export default function initializeChatSocket(server: HTTPServer) {
   io = new Server(server, {
     cors: {
-      origin: "http://localhost:3000", // Uygun CORS ayarlarınızı yapın
+      origin: "http://localhost:3000",
       methods: ["GET", "POST"],
       credentials: true,
     },

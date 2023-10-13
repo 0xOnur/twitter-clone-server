@@ -1,12 +1,19 @@
 import Notification from "../schemas/notification.schema";
+import { io } from "../sockets/socket";
 import { IAuthenticateRequest } from "../types/IAuthenticateRequest";
-import { Request, Response } from "express";
+import { Response } from "express";
+
+const broadcastNotification = (userId: string, notification: INotification) => {
+  io.to(userId).emit("getNotification", notification);
+}
 
 // Create Notification
 export const createNotification = async (notificationData: INotification) => {
   const newNotification = new Notification(notificationData);
   try {
     const savedNotification = await newNotification.save();
+    broadcastNotification(savedNotification.receiver.toString(), savedNotification);
+
     return savedNotification;
   } catch (error) {
     throw error;
@@ -20,7 +27,6 @@ export const getNotifications = async (
 ) => {
   try {
     const userId = req.user?._id;
-    console.log("🚀 ~ file: notificationController.ts:23 ~ userId:", userId);
 
     // Get the page and limit parameters from the request, or set default values
     const page = parseInt(req.query.page as string) || 1;
@@ -53,23 +59,6 @@ export const getNotifications = async (
     // Send the response
     res.status(200).json(response);
   } catch (error: any) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-// Get Unread Notifications
-export const getUnreadNotifications = async (
-  req: IAuthenticateRequest,
-  res: Response
-) => {
-  try {
-    const userId = req.user?._id;
-
-    const notificationCount = await Notification.countDocuments({receiver: userId, read: false});
-
-    res.status(200).json(notificationCount);
-
-  }catch (error: any) {
     res.status(500).json({ message: error.message });
   }
 };
