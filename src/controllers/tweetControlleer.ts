@@ -502,7 +502,7 @@ export const getRetweeters = async (req: Request, res: Response) => {
       tweetType: "retweet",
     })
       .sort({ createdAt: -1 })
-      .populate("author", "username displayName avatar cover isVerified")
+      .populate("author", "username displayName avatar cover bio isVerified")
       .select("author")
       .skip(skip)
       .limit(limit);
@@ -554,7 +554,7 @@ export const getLikers = async (req: Request, res: Response) => {
       tweetType: "like",
     })
       .sort({ createdAt: -1 })
-      .populate("author", "username displayName avatar cover isVerified")
+      .populate("author", "username displayName avatar cover bio isVerified")
       .select("author")
       .skip(skip)
       .limit(limit);
