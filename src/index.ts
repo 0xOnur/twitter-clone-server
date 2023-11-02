@@ -16,15 +16,17 @@ dotenv.config();
 
 export const app = express();
 export const server = createServer(app);
+const clientOrigin = process.env.CLIENT_ORIGIN || 'http://localhost:3000';
 
 initializeChatSocket(server);
 
-
 app.use(express.json());
 app.use(helmet());
-app.use(helmet.crossOriginResourcePolicy({policy: 'cross-origin'}));
 app.use(morgan("common"));
-app.use(cors({credentials: true, origin: "http://localhost:3000"}));
+app.use(cors({ credentials: true, origin: clientOrigin }));
+app.use(helmet.crossOriginResourcePolicy({policy: 'cross-origin'}));
+
+
 
 app.use('/user',userRoutes);
 app.use('/tweet', tweetRoutes);
@@ -40,7 +42,7 @@ const PORT = process.env.PORT || 5000;
 mongoose.set("strictQuery", false);
 mongoose.connect(String(process.env.CONNECTION_URL)).then(() => {
     server.listen(PORT, () => {
-        console.log(`Server running on: http://localhost:${PORT}`);
+        console.log(`Server running on: ${clientOrigin}`);
     });
 }).catch((error) => {
     console.log(error.message);
