@@ -42,10 +42,8 @@ const PORT = process.env.PORT || 5000;
 mongoose.set("strictQuery", false);
 mongoose.connect(String(process.env.CONNECTION_URL)).then(() => {
     server.listen(PORT, () => {
-        server.listen(PORT, () => {
-            console.log(`Server running on port ${PORT}`);
-            console.log(`Serving client from origin: ${clientOrigin}`);
-        });
+        console.log(`Server running on port ${PORT}`);
+        console.log(`Serving client from origin: ${clientOrigin}`);
     });
 }).catch((error) => {
     console.log(error.message);
