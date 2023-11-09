@@ -8,6 +8,7 @@ import {
     unlikeTweet,
     getTweetAuthor,
     getPopularTweets,
+    getNewTweets,
     retweetTweet,
     undoRetweet,
     addBookmark,
@@ -28,6 +29,7 @@ tweetRoutes.delete("/delete-tweet/:tweetId", authMiddleware, deleteTweet);
 
 tweetRoutes.get("/get-tweet/:tweetId", getSpecificTweet);
 tweetRoutes.get("/get-popular-tweets", getPopularTweets);
+tweetRoutes.get("/get-new-tweets", getNewTweets);
 
 tweetRoutes.get("/get-tweet-stats/:tweetId", getTweetStats);
 tweetRoutes.get("/get-tweet-author/:tweetId", getTweetAuthor);

@@ -58,6 +58,47 @@ export const getSpecificTweet = async (req: Request, res: Response) => {
   }
 };
 
+// Get New Tweets
+export const getNewTweets = async (req: Request, res: Response) => {
+  try {
+    // Get the page and limit parameters from the request, or set default values
+    const page = parseInt(req.query.page as string) || 1;
+    const perPage = parseInt(req.query.limit as string) || 10;
+
+    // Calculate the number of documents to skip
+    let skip = (page - 1) * perPage;
+    let limit = perPage;
+
+    const tweets = await Tweet.find(
+      { tweetType: { $in: ["tweet", "reply", "quote"] } })
+      .sort({ createdAt: -1 })
+      .select("_id")
+      .skip(skip)
+      .limit(limit);
+
+    // Find the total number of user documents in the database
+    const totalItems = await Tweet.countDocuments({ tweetType: { $in: ["tweet", "reply", "quote"] } });
+
+    // Calculate the total number of pages
+    const totalPages = Math.ceil(totalItems / limit);
+
+    // Construct the response object
+    const response = {
+      page: page,
+      perPage: limit,
+      totalItems: totalItems,
+      totalPages: totalPages,
+      data: tweets,
+    };
+
+    // Send the response
+    res.status(200).json(response);
+
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 // Get Popular Tweets
 export const getPopularTweets = async (req: Request, res: Response) => {
   try {
