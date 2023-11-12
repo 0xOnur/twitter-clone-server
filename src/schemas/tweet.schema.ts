@@ -19,7 +19,7 @@ const TweetSchema: Schema = new Schema(
     },
     content: {
       type: String,
-      maxLength: 280,
+      maxLength: 2500,
     },
     pollId: {
       type: Schema.Types.ObjectId,
